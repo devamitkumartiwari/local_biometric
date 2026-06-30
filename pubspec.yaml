@@ -1,0 +1,32 @@
+name: local_biometric
+description: A robust, efficient, and performant local biometric identity plugin for Flutter.
+version: 0.0.1
+homepage: https://github.com/amit/local_biometric
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+  flutter: '>=3.24.5'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  pigeon: ^27.1.0
+  meta: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: any
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.amit.local_biometric
+        pluginClass: LocalBiometricPlugin
+      ios:
+        pluginClass: LocalBiometricPlugin
+      macos:
+        pluginClass: LocalBiometricPlugin
+      windows:
+        pluginClass: LocalBiometricPlugin
