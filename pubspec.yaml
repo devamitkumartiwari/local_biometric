@@ -11,12 +11,12 @@ dependencies:
   flutter:
     sdk: flutter
   pigeon: ^27.1.0
-  meta: any
+  meta: ^1.18.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: any
+  flutter_lints: ^6.0.0
 
 flutter:
   plugin:
