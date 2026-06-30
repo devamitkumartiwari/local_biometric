@@ -16,7 +16,7 @@ Add `local_biometric` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  local_biometric: ^0.0.1
+  local_biometric: ^0.0.2
 ```
 
 ### iOS Configuration

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:local_biometric/local_biometric.dart';
@@ -40,28 +41,31 @@ class _EncryptedAuthPageState extends State<EncryptedAuthPage> {
         _isLockedOut = availability.canAuthenticate == false && 
                       (availability.reason?.toLowerCase().contains('lockout') ?? false);
         if (_isLockedOut) {
-          _lastResult = 'System detects biometric lockout.';
+          _lastResult = 'System detects biometric lockout (${availability.reason}).';
         }
       });
 
       // Only show alert if it's a new lockout detection to avoid duplicate dialogs
       if (_isLockedOut && !wasLockedOut) {
         debugPrint('[LocalBiometric] Triggering Lockout Alert from background check');
-        _showLockoutAlert();
+        _showLockoutAlert(isPermanent: availability.reason == 'lockedOutPermanent');
       }
     }
   }
 
-  Future<void> _showLockoutAlert() async {
+  Future<void> _showLockoutAlert({bool isPermanent = false}) async {
     if (!mounted) return;
     debugPrint('[LocalBiometric] Showing Lockout Alert Dialog');
+    final bool isIOS = Platform.isIOS;
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Biometrics Locked'),
-          content: const Text('Biometric authentication is currently locked out. Would you like to verify with your passcode to re-enable it?'),
+          title: Text(isPermanent || isIOS ? 'Biometrics Locked' : 'Biometrics Temporarily Locked'),
+          content: Text(isPermanent || isIOS 
+            ? 'Biometric authentication is locked. Passcode verification is required to re-enable it.'
+            : 'Biometric authentication is temporarily locked (30s). You can wait or verify with your passcode to unlock immediately.'),
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel'),
@@ -100,18 +104,22 @@ class _EncryptedAuthPageState extends State<EncryptedAuthPage> {
         
         // Improved lockout detection for Encrypted Auth
         bool locked = false;
+        bool permanent = false;
         if (result is IdentitySignatureResult) {
           if (result.code == IdentityError.lockedOut) locked = true;
+          if (result.code == IdentityError.lockedOutPermanent) { locked = true; permanent = true; }
         } else if (result is IdentityEnrollmentResult) {
           if (result.code == IdentityError.lockedOut) locked = true;
+          if (result.code == IdentityError.lockedOutPermanent) { locked = true; permanent = true; }
         } else if (result is PresencePromptResult) {
           if (result.code == IdentityError.lockedOut) locked = true;
+          if (result.code == IdentityError.lockedOutPermanent) { locked = true; permanent = true; }
         }
         
         if (locked) {
           _isLockedOut = true;
-          _lastResult = 'Biometric Lockout Detected (Code: lockedOut)';
-          _showLockoutAlert();
+          _lastResult = 'Biometric Lockout Detected (${permanent ? "Permanent" : "Temporary"})';
+          _showLockoutAlert(isPermanent: permanent);
         } else if (isRecovery && result is PresencePromptResult && result.success == true) {
           _isLockedOut = false;
           _lastResult = 'Biometrics unlocked! You can now use biometrics.';

@@ -62,11 +62,18 @@ class LocalBiometricPlugin : FlutterPlugin, LocalBiometricApi, ActivityAware {
         val enrolled = canAuth != androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED &&
                       canAuth != androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE
         
+        var reason = if (!available) LocalBiometricErrorMapper.biometricErrorName(canAuth) else null
+        
+        // Use raw integer codes for reliability across support library versions
+        // 7: BIOMETRIC_ERROR_LOCKOUT, 9: BIOMETRIC_ERROR_LOCKOUT_PERMANENT
+        if (canAuth == 7) reason = "lockedOut"
+        if (canAuth == 9) reason = "lockedOutPermanent"
+
         callback(Result.success(IdentityAvailability(
             canAuthenticate = available,
             hasEnrolledBiometrics = enrolled,
             availableBiometrics = authenticator.detectBiometricTypes(),
-            reason = if (!available) LocalBiometricErrorMapper.biometricErrorName(canAuth) else null
+            reason = reason
         )))
     }
 

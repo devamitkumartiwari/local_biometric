@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:local_biometric/local_biometric.dart';
 
@@ -29,28 +30,31 @@ class _SimpleAuthPageState extends State<SimpleAuthPage> {
     if (mounted) {
       final wasLockedOut = _isLockedOut;
       setState(() {
-        // iOS specifically sets canAuthenticate to false and provides a reason when locked out
         _isLockedOut = availability.canAuthenticate == false && 
                       (availability.reason?.toLowerCase().contains('lockout') ?? false);
         if (_isLockedOut) {
-          _lastResult = 'System detects biometric lockout.';
+          _lastResult = 'System detects biometric lockout (${availability.reason}).';
         }
       });
 
       if (_isLockedOut && !wasLockedOut) {
-        _showLockoutAlert();
+        debugPrint('[LocalBiometric] Triggering Lockout Alert from background check');
+        _showLockoutAlert(isPermanent: availability.reason == 'lockedOutPermanent');
       }
     }
   }
 
-  Future<void> _showLockoutAlert() async {
+  Future<void> _showLockoutAlert({bool isPermanent = false}) async {
+    final bool isIOS = Platform.isIOS;
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Biometrics Locked'),
-          content: const Text('Biometric authentication is currently locked out. Would you like to verify with your passcode to re-enable it?'),
+          title: Text(isPermanent || isIOS ? 'Biometrics Locked' : 'Biometrics Temporarily Locked'),
+          content: Text(isPermanent || isIOS 
+            ? 'Biometric authentication is locked. Passcode verification is required to re-enable it.'
+            : 'Biometric authentication is temporarily locked (30s). You can wait or verify with your passcode to unlock immediately.'),
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel'),
@@ -89,8 +93,9 @@ class _SimpleAuthPageState extends State<SimpleAuthPage> {
           _isLockedOut = false;
         } else {
           _lastResult = 'Failed: ${result.code}\nError: ${result.error}';
-          if (result.code == IdentityError.lockedOut) {
+          if (result.code == IdentityError.lockedOut || result.code == IdentityError.lockedOutPermanent) {
             _isLockedOut = true;
+            _showLockoutAlert(isPermanent: result.code == IdentityError.lockedOutPermanent || Platform.isIOS);
           }
         }
       });

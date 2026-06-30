@@ -8,6 +8,11 @@ android {
     namespace = "com.amit.local_biometric_example"
     compileSdk = 37
 
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
     defaultConfig {
         applicationId = "com.amit.local_biometric_example"
         minSdk = 28

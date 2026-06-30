@@ -41,7 +41,7 @@ public class LocalBiometricPlugin: NSObject, FlutterPlugin, LocalBiometricApi {
             canAuthenticate: available,
             hasEnrolledBiometrics: error?.code != LAError.biometryNotEnrolled.rawValue,
             availableBiometrics: types,
-            reason: isLockedOut ? "lockedOut" : error?.localizedDescription
+            reason: isLockedOut ? "lockedOutPermanent" : error?.localizedDescription
         )))
     }
 
@@ -172,14 +172,14 @@ public class LocalBiometricPlugin: NSObject, FlutterPlugin, LocalBiometricApi {
             if status == errSecItemNotFound {
                 errorCode = .keyNotFound
             } else if laCode == -7 || laCode == -8 || laCode == LAError.biometryLockout.rawValue {
-                errorCode = .lockedOut
+                errorCode = .lockedOutPermanent
             } else if status == errSecUserCanceled || laCode == LAError.userCancel.rawValue {
                 errorCode = .userCanceled
             } else if status == errSecAuthFailed {
                 // Sometimes Secure Enclave returns authFailed instead of specific lockout error
                 // so we re-check policy to confirm lockout
                 if !canAuth && (laCode == -7 || laCode == -8 || laCode == LAError.biometryLockout.rawValue) {
-                    errorCode = .lockedOut
+                    errorCode = .lockedOutPermanent
                 }
             }
 
@@ -243,7 +243,7 @@ public class LocalBiometricPlugin: NSObject, FlutterPlugin, LocalBiometricApi {
                 if let laError = error as? LAError {
                     switch laError.code {
                     case .userCancel: errorCode = .userCanceled
-                    case .biometryLockout: errorCode = .lockedOut
+                    case .biometryLockout: errorCode = .lockedOutPermanent
                     case .biometryNotAvailable: errorCode = .notAvailable
                     case .biometryNotEnrolled: errorCode = .notEnrolled
                     case .passcodeNotSet: errorCode = .passcodeNotSet
