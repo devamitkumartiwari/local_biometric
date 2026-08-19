@@ -87,7 +87,8 @@ class LocalSecureIdentityStorage {
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecSuccess {
-            return (result as! SecKey, status)
+            let key = result as! SecKey
+            return (key, status)
         }
         return (nil, status)
     }

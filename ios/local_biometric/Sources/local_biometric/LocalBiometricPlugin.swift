@@ -1,5 +1,8 @@
+#if os(iOS)
 import Flutter
-import UIKit
+#elseif os(macOS)
+import FlutterMacOS
+#endif
 import LocalAuthentication
 
 public class LocalBiometricPlugin: NSObject, FlutterPlugin, LocalBiometricApi {
@@ -10,9 +13,14 @@ public class LocalBiometricPlugin: NSObject, FlutterPlugin, LocalBiometricApi {
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = LocalBiometricPlugin()
-        LocalBiometricApiSetup.setUp(binaryMessenger: registrar.messenger(), api: instance)
+        #if os(iOS)
+        let messenger = registrar.messenger()
+        #elseif os(macOS)
+        let messenger = registrar.messenger
+        #endif
+        LocalBiometricApiSetup.setUp(binaryMessenger: messenger, api: instance)
 
-        let eventChannel = FlutterEventChannel(name: "com.amit.local_biometric/changes", binaryMessenger: registrar.messenger())
+        let eventChannel = FlutterEventChannel(name: "com.amit.local_biometric/changes", binaryMessenger: messenger)
         eventChannel.setStreamHandler(instance.changeMonitor)
     }
 

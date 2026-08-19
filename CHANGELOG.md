@@ -1,3 +1,17 @@
+## 0.0.3
+
+* Raised iOS/macOS deployment targets to iOS 16.0 / macOS 13.0 and bumped Swift to 6.0.
+* Added Swift Package Manager support (`Package.swift` for iOS and macOS) alongside the existing
+  CocoaPods podspecs.
+* Fixed a macOS build bug in the shared iOS/macOS Swift source: platform-conditional imports
+  (`Flutter`/`UIKit` vs `FlutterMacOS`) and `FlutterPluginRegistrar.messenger` (method on iOS,
+  property on macOS) were previously iOS-only and did not compile for macOS.
+* Verified and documented the plugin's UIScene safety; example app now supports multiple scenes.
+* Bumped `androidx.biometric` and `kotlinx-coroutines-android` to their latest available versions.
+* Bumped `meta` to `^1.19.0`.
+* Moved `pigeon` from `dependencies` to `dev_dependencies` (it's a codegen-only tool, never imported
+  at runtime).
+
 ## 0.0.2
 
 * Enhanced biometric lockout handling for both iOS and Android.

@@ -11,7 +11,7 @@ A robust, efficient, and performant local biometric identity plugin for Flutter.
   s.source           = { :path => '.' }
   s.source_files = '../ios/local_biometric/Sources/local_biometric/**/*'
   s.dependency 'FlutterMacOS'
-  s.platform = :osx, '10.15'
+  s.platform = :osx, '13.0'
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
-  s.swift_version = '5.0'
+  s.swift_version = '6.0'
 end

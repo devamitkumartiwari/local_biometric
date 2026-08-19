@@ -1,6 +1,11 @@
 import Foundation
 import LocalAuthentication
+#if os(iOS)
 import Flutter
+#elseif os(macOS)
+import AppKit
+import FlutterMacOS
+#endif
 
 class LocalIdentityChangeMonitor: NSObject, FlutterStreamHandler {
     private var eventSink: FlutterEventSink?
@@ -9,7 +14,12 @@ class LocalIdentityChangeMonitor: NSObject, FlutterStreamHandler {
     func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
         self.eventSink = events
         checkAndEmit()
-        NotificationCenter.default.addObserver(self, selector: #selector(appBecameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
+        #if os(iOS)
+        let activeNotification = UIApplication.didBecomeActiveNotification
+        #elseif os(macOS)
+        let activeNotification = NSApplication.didBecomeActiveNotification
+        #endif
+        NotificationCenter.default.addObserver(self, selector: #selector(appBecameActive), name: activeNotification, object: nil)
         return nil
     }
 

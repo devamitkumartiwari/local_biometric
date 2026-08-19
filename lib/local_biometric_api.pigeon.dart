@@ -10,9 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:meta/meta.dart' show immutable, protected, visibleForTesting;
 
 Object? _extractReplyValueOrThrow(
-    List<Object?>? replyList,
-    String channelName, {
-    required bool isNullValid,
+  List<Object?>? replyList,
+  String channelName, {
+  required bool isNullValid,
 }) {
   if (replyList == null) {
     throw PlatformException(
@@ -46,8 +46,9 @@ bool _deepEquals(Object? a, Object? b) {
   }
   if (a is List && b is List) {
     return a.length == b.length &&
-        a.indexed
-            .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+        a.indexed.every(
+          ((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]),
+        );
   }
   if (a is Map && b is Map) {
     if (a.length != b.length) {
@@ -96,7 +97,6 @@ int _deepHash(Object? value) {
   return value.hashCode;
 }
 
-
 /// Standardized error codes for the plugin.
 enum IdentityError {
   success,
@@ -118,61 +118,28 @@ enum IdentityError {
 }
 
 /// The type of authentication that was used.
-enum IdentityAuthType {
-  credential,
-  biometric,
-  unknown,
-}
+enum IdentityAuthType { credential, biometric, unknown }
 
 /// Types of biometric authentication supported.
-enum IdentityBiometricType {
-  face,
-  fingerprint,
-  iris,
-  multiple,
-  unavailable,
-}
+enum IdentityBiometricType { face, fingerprint, iris, multiple, unavailable }
 
 /// Biometric authentication strength level.
-enum IdentityBiometricStrength {
-  strong,
-  weak,
-}
+enum IdentityBiometricStrength { strong, weak }
 
 /// The cryptographic algorithm to use.
-enum IdentitySignatureType {
-  rsa,
-  ecdsa,
-}
+enum IdentitySignatureType { rsa, ecdsa }
 
 /// Output format for public keys.
-enum IdentityKeyFormat {
-  base64,
-  pem,
-  hex,
-  raw,
-}
+enum IdentityKeyFormat { base64, pem, hex, raw }
 
 /// Output format for cryptographic signatures.
-enum IdentitySignatureFormat {
-  base64,
-  hex,
-  raw,
-}
+enum IdentitySignatureFormat { base64, hex, raw }
 
 /// Input format for encrypted payloads.
-enum IdentityPayloadFormat {
-  base64,
-  hex,
-  raw,
-}
+enum IdentityPayloadFormat { base64, hex, raw }
 
 /// Status of the biometric identity.
-enum IdentityStatus {
-  valid,
-  changed,
-  unavailable,
-}
+enum IdentityStatus { valid, changed, unavailable }
 
 class IdentityAvailability {
   IdentityAvailability({
@@ -200,14 +167,16 @@ class IdentityAvailability {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static IdentityAvailability decode(Object result) {
     result as List<Object?>;
     return IdentityAvailability(
       canAuthenticate: result[0] as bool?,
       hasEnrolledBiometrics: result[1] as bool?,
-      availableBiometrics: (result[2] as List<Object?>?)?.cast<IdentityBiometricType?>(),
+      availableBiometrics: (result[2] as List<Object?>?)
+          ?.cast<IdentityBiometricType?>(),
       reason: result[3] as String?,
     );
   }
@@ -221,7 +190,10 @@ class IdentityAvailability {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(canAuthenticate, other.canAuthenticate) && _deepEquals(hasEnrolledBiometrics, other.hasEnrolledBiometrics) && _deepEquals(availableBiometrics, other.availableBiometrics) && _deepEquals(reason, other.reason);
+    return _deepEquals(canAuthenticate, other.canAuthenticate) &&
+        _deepEquals(hasEnrolledBiometrics, other.hasEnrolledBiometrics) &&
+        _deepEquals(availableBiometrics, other.availableBiometrics) &&
+        _deepEquals(reason, other.reason);
   }
 
   @override
@@ -288,7 +260,8 @@ class IdentityEnrollmentResult {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static IdentityEnrollmentResult decode(Object result) {
     result as List<Object?>;
@@ -310,13 +283,24 @@ class IdentityEnrollmentResult {
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
-    if (other is! IdentityEnrollmentResult || other.runtimeType != runtimeType) {
+    if (other is! IdentityEnrollmentResult ||
+        other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(publicKey, other.publicKey) && _deepEquals(publicKeyBytes, other.publicKeyBytes) && _deepEquals(error, other.error) && _deepEquals(code, other.code) && _deepEquals(algorithm, other.algorithm) && _deepEquals(keySize, other.keySize) && _deepEquals(decryptingPublicKey, other.decryptingPublicKey) && _deepEquals(decryptingAlgorithm, other.decryptingAlgorithm) && _deepEquals(decryptingKeySize, other.decryptingKeySize) && _deepEquals(isHybridMode, other.isHybridMode) && _deepEquals(authenticationType, other.authenticationType);
+    return _deepEquals(publicKey, other.publicKey) &&
+        _deepEquals(publicKeyBytes, other.publicKeyBytes) &&
+        _deepEquals(error, other.error) &&
+        _deepEquals(code, other.code) &&
+        _deepEquals(algorithm, other.algorithm) &&
+        _deepEquals(keySize, other.keySize) &&
+        _deepEquals(decryptingPublicKey, other.decryptingPublicKey) &&
+        _deepEquals(decryptingAlgorithm, other.decryptingAlgorithm) &&
+        _deepEquals(decryptingKeySize, other.decryptingKeySize) &&
+        _deepEquals(isHybridMode, other.isHybridMode) &&
+        _deepEquals(authenticationType, other.authenticationType);
   }
 
   @override
@@ -371,7 +355,8 @@ class IdentitySignatureResult {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static IdentitySignatureResult decode(Object result) {
     result as List<Object?>;
@@ -396,7 +381,14 @@ class IdentitySignatureResult {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(signature, other.signature) && _deepEquals(signatureBytes, other.signatureBytes) && _deepEquals(publicKey, other.publicKey) && _deepEquals(error, other.error) && _deepEquals(code, other.code) && _deepEquals(algorithm, other.algorithm) && _deepEquals(keySize, other.keySize) && _deepEquals(authenticationType, other.authenticationType);
+    return _deepEquals(signature, other.signature) &&
+        _deepEquals(signatureBytes, other.signatureBytes) &&
+        _deepEquals(publicKey, other.publicKey) &&
+        _deepEquals(error, other.error) &&
+        _deepEquals(code, other.code) &&
+        _deepEquals(algorithm, other.algorithm) &&
+        _deepEquals(keySize, other.keySize) &&
+        _deepEquals(authenticationType, other.authenticationType);
   }
 
   @override
@@ -426,16 +418,12 @@ class IdentityDecryptResult {
   IdentityAuthType? authenticationType;
 
   List<Object?> _toList() {
-    return <Object?>[
-      decryptedData,
-      error,
-      code,
-      authenticationType,
-    ];
+    return <Object?>[decryptedData, error, code, authenticationType];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static IdentityDecryptResult decode(Object result) {
     result as List<Object?>;
@@ -456,7 +444,10 @@ class IdentityDecryptResult {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(decryptedData, other.decryptedData) && _deepEquals(error, other.error) && _deepEquals(code, other.code) && _deepEquals(authenticationType, other.authenticationType);
+    return _deepEquals(decryptedData, other.decryptedData) &&
+        _deepEquals(error, other.error) &&
+        _deepEquals(code, other.code) &&
+        _deepEquals(authenticationType, other.authenticationType);
   }
 
   @override
@@ -515,7 +506,8 @@ class IdentityInfo {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static IdentityInfo decode(Object result) {
     result as List<Object?>;
@@ -541,7 +533,15 @@ class IdentityInfo {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(exists, other.exists) && _deepEquals(isValid, other.isValid) && _deepEquals(algorithm, other.algorithm) && _deepEquals(keySize, other.keySize) && _deepEquals(isHybridMode, other.isHybridMode) && _deepEquals(publicKey, other.publicKey) && _deepEquals(decryptingPublicKey, other.decryptingPublicKey) && _deepEquals(decryptingAlgorithm, other.decryptingAlgorithm) && _deepEquals(decryptingKeySize, other.decryptingKeySize);
+    return _deepEquals(exists, other.exists) &&
+        _deepEquals(isValid, other.isValid) &&
+        _deepEquals(algorithm, other.algorithm) &&
+        _deepEquals(keySize, other.keySize) &&
+        _deepEquals(isHybridMode, other.isHybridMode) &&
+        _deepEquals(publicKey, other.publicKey) &&
+        _deepEquals(decryptingPublicKey, other.decryptingPublicKey) &&
+        _deepEquals(decryptingAlgorithm, other.decryptingAlgorithm) &&
+        _deepEquals(decryptingKeySize, other.decryptingKeySize);
   }
 
   @override
@@ -600,7 +600,8 @@ class IdentityEnrollmentConfig {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static IdentityEnrollmentConfig decode(Object result) {
     result as List<Object?>;
@@ -620,13 +621,25 @@ class IdentityEnrollmentConfig {
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
-    if (other is! IdentityEnrollmentConfig || other.runtimeType != runtimeType) {
+    if (other is! IdentityEnrollmentConfig ||
+        other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(signatureType, other.signatureType) && _deepEquals(enforceBiometric, other.enforceBiometric) && _deepEquals(setInvalidatedByBiometricEnrollment, other.setInvalidatedByBiometricEnrollment) && _deepEquals(useDeviceCredentials, other.useDeviceCredentials) && _deepEquals(enableDecryption, other.enableDecryption) && _deepEquals(promptSubtitle, other.promptSubtitle) && _deepEquals(promptDescription, other.promptDescription) && _deepEquals(cancelButtonText, other.cancelButtonText) && _deepEquals(failIfExists, other.failIfExists);
+    return _deepEquals(signatureType, other.signatureType) &&
+        _deepEquals(enforceBiometric, other.enforceBiometric) &&
+        _deepEquals(
+          setInvalidatedByBiometricEnrollment,
+          other.setInvalidatedByBiometricEnrollment,
+        ) &&
+        _deepEquals(useDeviceCredentials, other.useDeviceCredentials) &&
+        _deepEquals(enableDecryption, other.enableDecryption) &&
+        _deepEquals(promptSubtitle, other.promptSubtitle) &&
+        _deepEquals(promptDescription, other.promptDescription) &&
+        _deepEquals(cancelButtonText, other.cancelButtonText) &&
+        _deepEquals(failIfExists, other.failIfExists);
   }
 
   @override
@@ -665,7 +678,8 @@ class IdentitySignatureConfig {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static IdentitySignatureConfig decode(Object result) {
     result as List<Object?>;
@@ -686,7 +700,10 @@ class IdentitySignatureConfig {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(promptSubtitle, other.promptSubtitle) && _deepEquals(promptDescription, other.promptDescription) && _deepEquals(cancelButtonText, other.cancelButtonText) && _deepEquals(allowDeviceCredentials, other.allowDeviceCredentials);
+    return _deepEquals(promptSubtitle, other.promptSubtitle) &&
+        _deepEquals(promptDescription, other.promptDescription) &&
+        _deepEquals(cancelButtonText, other.cancelButtonText) &&
+        _deepEquals(allowDeviceCredentials, other.allowDeviceCredentials);
   }
 
   @override
@@ -725,7 +742,8 @@ class IdentityDecryptConfig {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static IdentityDecryptConfig decode(Object result) {
     result as List<Object?>;
@@ -746,7 +764,10 @@ class IdentityDecryptConfig {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(promptSubtitle, other.promptSubtitle) && _deepEquals(promptDescription, other.promptDescription) && _deepEquals(cancelButtonText, other.cancelButtonText) && _deepEquals(allowDeviceCredentials, other.allowDeviceCredentials);
+    return _deepEquals(promptSubtitle, other.promptSubtitle) &&
+        _deepEquals(promptDescription, other.promptDescription) &&
+        _deepEquals(cancelButtonText, other.cancelButtonText) &&
+        _deepEquals(allowDeviceCredentials, other.allowDeviceCredentials);
   }
 
   @override
@@ -789,7 +810,8 @@ class PresencePromptConfig {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static PresencePromptConfig decode(Object result) {
     result as List<Object?>;
@@ -811,7 +833,11 @@ class PresencePromptConfig {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(subtitle, other.subtitle) && _deepEquals(promptDescription, other.promptDescription) && _deepEquals(cancelButtonText, other.cancelButtonText) && _deepEquals(allowDeviceCredentials, other.allowDeviceCredentials) && _deepEquals(biometricStrength, other.biometricStrength);
+    return _deepEquals(subtitle, other.subtitle) &&
+        _deepEquals(promptDescription, other.promptDescription) &&
+        _deepEquals(cancelButtonText, other.cancelButtonText) &&
+        _deepEquals(allowDeviceCredentials, other.allowDeviceCredentials) &&
+        _deepEquals(biometricStrength, other.biometricStrength);
   }
 
   @override
@@ -841,16 +867,12 @@ class PresencePromptResult {
   IdentityAuthType? authenticationType;
 
   List<Object?> _toList() {
-    return <Object?>[
-      success,
-      error,
-      code,
-      authenticationType,
-    ];
+    return <Object?>[success, error, code, authenticationType];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static PresencePromptResult decode(Object result) {
     result as List<Object?>;
@@ -871,7 +893,10 @@ class PresencePromptResult {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(success, other.success) && _deepEquals(error, other.error) && _deepEquals(code, other.code) && _deepEquals(authenticationType, other.authenticationType);
+    return _deepEquals(success, other.success) &&
+        _deepEquals(error, other.error) &&
+        _deepEquals(code, other.code) &&
+        _deepEquals(authenticationType, other.authenticationType);
   }
 
   @override
@@ -884,7 +909,6 @@ class PresencePromptResult {
   }
 }
 
-
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -892,61 +916,61 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is IdentityError) {
+    } else if (value is IdentityError) {
       buffer.putUint8(129);
       writeValue(buffer, value.index);
-    }    else if (value is IdentityAuthType) {
+    } else if (value is IdentityAuthType) {
       buffer.putUint8(130);
       writeValue(buffer, value.index);
-    }    else if (value is IdentityBiometricType) {
+    } else if (value is IdentityBiometricType) {
       buffer.putUint8(131);
       writeValue(buffer, value.index);
-    }    else if (value is IdentityBiometricStrength) {
+    } else if (value is IdentityBiometricStrength) {
       buffer.putUint8(132);
       writeValue(buffer, value.index);
-    }    else if (value is IdentitySignatureType) {
+    } else if (value is IdentitySignatureType) {
       buffer.putUint8(133);
       writeValue(buffer, value.index);
-    }    else if (value is IdentityKeyFormat) {
+    } else if (value is IdentityKeyFormat) {
       buffer.putUint8(134);
       writeValue(buffer, value.index);
-    }    else if (value is IdentitySignatureFormat) {
+    } else if (value is IdentitySignatureFormat) {
       buffer.putUint8(135);
       writeValue(buffer, value.index);
-    }    else if (value is IdentityPayloadFormat) {
+    } else if (value is IdentityPayloadFormat) {
       buffer.putUint8(136);
       writeValue(buffer, value.index);
-    }    else if (value is IdentityStatus) {
+    } else if (value is IdentityStatus) {
       buffer.putUint8(137);
       writeValue(buffer, value.index);
-    }    else if (value is IdentityAvailability) {
+    } else if (value is IdentityAvailability) {
       buffer.putUint8(138);
       writeValue(buffer, value.encode());
-    }    else if (value is IdentityEnrollmentResult) {
+    } else if (value is IdentityEnrollmentResult) {
       buffer.putUint8(139);
       writeValue(buffer, value.encode());
-    }    else if (value is IdentitySignatureResult) {
+    } else if (value is IdentitySignatureResult) {
       buffer.putUint8(140);
       writeValue(buffer, value.encode());
-    }    else if (value is IdentityDecryptResult) {
+    } else if (value is IdentityDecryptResult) {
       buffer.putUint8(141);
       writeValue(buffer, value.encode());
-    }    else if (value is IdentityInfo) {
+    } else if (value is IdentityInfo) {
       buffer.putUint8(142);
       writeValue(buffer, value.encode());
-    }    else if (value is IdentityEnrollmentConfig) {
+    } else if (value is IdentityEnrollmentConfig) {
       buffer.putUint8(143);
       writeValue(buffer, value.encode());
-    }    else if (value is IdentitySignatureConfig) {
+    } else if (value is IdentitySignatureConfig) {
       buffer.putUint8(144);
       writeValue(buffer, value.encode());
-    }    else if (value is IdentityDecryptConfig) {
+    } else if (value is IdentityDecryptConfig) {
       buffer.putUint8(145);
       writeValue(buffer, value.encode());
-    }    else if (value is PresencePromptConfig) {
+    } else if (value is PresencePromptConfig) {
       buffer.putUint8(146);
       writeValue(buffer, value.encode());
-    }    else if (value is PresencePromptResult) {
+    } else if (value is PresencePromptResult) {
       buffer.putUint8(147);
       writeValue(buffer, value.encode());
     } else {
@@ -1014,9 +1038,13 @@ class LocalBiometricApi {
   /// Constructor for [LocalBiometricApi]. The [binaryMessenger] named argument is
   /// available for dependency injection. If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  LocalBiometricApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
-      : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+  LocalBiometricApi({
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -1024,7 +1052,8 @@ class LocalBiometricApi {
   final String pigeonVar_messageChannelSuffix;
 
   Future<IdentityAvailability> checkAvailability() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.local_biometric.LocalBiometricApi.checkAvailability$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.local_biometric.LocalBiometricApi.checkAvailability$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -1034,111 +1063,160 @@ class LocalBiometricApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as IdentityAvailability;
   }
 
-  Future<IdentityEnrollmentResult> enrollIdentity(String? keyAlias, IdentityEnrollmentConfig? config, IdentityKeyFormat keyFormat, String? promptMessage) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.local_biometric.LocalBiometricApi.enrollIdentity$pigeonVar_messageChannelSuffix';
+  Future<IdentityEnrollmentResult> enrollIdentity(
+    String? keyAlias,
+    IdentityEnrollmentConfig? config,
+    IdentityKeyFormat keyFormat,
+    String? promptMessage,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.local_biometric.LocalBiometricApi.enrollIdentity$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[keyAlias, config, keyFormat, promptMessage]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[keyAlias, config, keyFormat, promptMessage],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as IdentityEnrollmentResult;
   }
 
-  Future<IdentitySignatureResult> signPayload(String payload, String? keyAlias, IdentitySignatureConfig? config, IdentitySignatureFormat signatureFormat, IdentityKeyFormat keyFormat, String? promptMessage) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.local_biometric.LocalBiometricApi.signPayload$pigeonVar_messageChannelSuffix';
+  Future<IdentitySignatureResult> signPayload(
+    String payload,
+    String? keyAlias,
+    IdentitySignatureConfig? config,
+    IdentitySignatureFormat signatureFormat,
+    IdentityKeyFormat keyFormat,
+    String? promptMessage,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.local_biometric.LocalBiometricApi.signPayload$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[payload, keyAlias, config, signatureFormat, keyFormat, promptMessage]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[
+        payload,
+        keyAlias,
+        config,
+        signatureFormat,
+        keyFormat,
+        promptMessage,
+      ],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as IdentitySignatureResult;
   }
 
-  Future<IdentitySignatureResult> signPayloadBytes(Uint8List payload, String? keyAlias, IdentitySignatureConfig? config, IdentitySignatureFormat signatureFormat, IdentityKeyFormat keyFormat, String? promptMessage) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.local_biometric.LocalBiometricApi.signPayloadBytes$pigeonVar_messageChannelSuffix';
+  Future<IdentitySignatureResult> signPayloadBytes(
+    Uint8List payload,
+    String? keyAlias,
+    IdentitySignatureConfig? config,
+    IdentitySignatureFormat signatureFormat,
+    IdentityKeyFormat keyFormat,
+    String? promptMessage,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.local_biometric.LocalBiometricApi.signPayloadBytes$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[payload, keyAlias, config, signatureFormat, keyFormat, promptMessage]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[
+        payload,
+        keyAlias,
+        config,
+        signatureFormat,
+        keyFormat,
+        promptMessage,
+      ],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as IdentitySignatureResult;
   }
 
-  Future<IdentityDecryptResult> decryptPayload(String payload, String? keyAlias, IdentityPayloadFormat payloadFormat, IdentityDecryptConfig? config, String? promptMessage) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.local_biometric.LocalBiometricApi.decryptPayload$pigeonVar_messageChannelSuffix';
+  Future<IdentityDecryptResult> decryptPayload(
+    String payload,
+    String? keyAlias,
+    IdentityPayloadFormat payloadFormat,
+    IdentityDecryptConfig? config,
+    String? promptMessage,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.local_biometric.LocalBiometricApi.decryptPayload$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[payload, keyAlias, payloadFormat, config, promptMessage]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[payload, keyAlias, payloadFormat, config, promptMessage],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as IdentityDecryptResult;
   }
 
   Future<bool> revokeIdentity(String? keyAlias) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.local_biometric.LocalBiometricApi.revokeIdentity$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.local_biometric.LocalBiometricApi.revokeIdentity$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[keyAlias]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[keyAlias],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as bool;
   }
 
   Future<bool> revokeAllIdentities() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.local_biometric.LocalBiometricApi.revokeAllIdentities$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.local_biometric.LocalBiometricApi.revokeAllIdentities$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -1148,54 +1226,65 @@ class LocalBiometricApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as bool;
   }
 
-  Future<IdentityInfo> getIdentityStatus(String? keyAlias, bool checkValidity, IdentityKeyFormat keyFormat) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.local_biometric.LocalBiometricApi.getIdentityStatus$pigeonVar_messageChannelSuffix';
+  Future<IdentityInfo> getIdentityStatus(
+    String? keyAlias,
+    bool checkValidity,
+    IdentityKeyFormat keyFormat,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.local_biometric.LocalBiometricApi.getIdentityStatus$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[keyAlias, checkValidity, keyFormat]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[keyAlias, checkValidity, keyFormat],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as IdentityInfo;
   }
 
-  Future<PresencePromptResult> verifyPresence(String promptMessage, PresencePromptConfig? config) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.local_biometric.LocalBiometricApi.verifyPresence$pigeonVar_messageChannelSuffix';
+  Future<PresencePromptResult> verifyPresence(
+    String promptMessage,
+    PresencePromptConfig? config,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.local_biometric.LocalBiometricApi.verifyPresence$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[promptMessage, config]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[promptMessage, config],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as PresencePromptResult;
   }
 
   Future<bool> isDeviceSecure() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.local_biometric.LocalBiometricApi.isDeviceSecure$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.local_biometric.LocalBiometricApi.isDeviceSecure$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -1205,16 +1294,16 @@ class LocalBiometricApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as bool;
   }
 
   Future<void> acknowledgeIdentityChange() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.local_biometric.LocalBiometricApi.acknowledgeIdentityChange$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.local_biometric.LocalBiometricApi.acknowledgeIdentityChange$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -1224,10 +1313,9 @@ class LocalBiometricApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 }

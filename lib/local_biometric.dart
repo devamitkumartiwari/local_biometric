@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/services.dart';
+
 import 'local_biometric_api.pigeon.dart';
 
 export 'local_biometric_api.pigeon.dart';
@@ -10,7 +12,9 @@ export 'local_biometric_api.pigeon.dart';
 /// cryptographic signatures (RSA/ECDSA) using the Secure Enclave (iOS) and Keystore (Android).
 class LocalBiometric {
   final LocalBiometricApi _api = LocalBiometricApi();
-  static const EventChannel _eventChannel = EventChannel('com.amit.local_biometric/changes');
+  static const EventChannel _eventChannel = EventChannel(
+    'com.amit.local_biometric/changes',
+  );
 
   /// Stream of identity status changes.
   ///
@@ -49,7 +53,14 @@ class LocalBiometric {
     IdentitySignatureFormat signatureFormat = IdentitySignatureFormat.base64,
     IdentityKeyFormat keyFormat = IdentityKeyFormat.base64,
     String? promptMessage,
-  }) => _api.signPayload(payload, keyAlias, config, signatureFormat, keyFormat, promptMessage);
+  }) => _api.signPayload(
+    payload,
+    keyAlias,
+    config,
+    signatureFormat,
+    keyFormat,
+    promptMessage,
+  );
 
   /// Signs raw bytes using an enrolled identity.
   ///
@@ -63,7 +74,14 @@ class LocalBiometric {
     IdentitySignatureFormat signatureFormat = IdentitySignatureFormat.base64,
     IdentityKeyFormat keyFormat = IdentityKeyFormat.base64,
     String? promptMessage,
-  }) => _api.signPayloadBytes(payload, keyAlias, config, signatureFormat, keyFormat, promptMessage);
+  }) => _api.signPayloadBytes(
+    payload,
+    keyAlias,
+    config,
+    signatureFormat,
+    keyFormat,
+    promptMessage,
+  );
 
   /// Decrypts a payload that was encrypted using the public key of an enrolled identity.
   ///
@@ -74,10 +92,17 @@ class LocalBiometric {
     IdentityPayloadFormat payloadFormat = IdentityPayloadFormat.base64,
     IdentityDecryptConfig? config,
     String? promptMessage,
-  }) => _api.decryptPayload(payload, keyAlias, payloadFormat, config, promptMessage);
+  }) => _api.decryptPayload(
+    payload,
+    keyAlias,
+    payloadFormat,
+    config,
+    promptMessage,
+  );
 
   /// Revokes (deletes) a specific enrolled identity.
-  Future<bool> revokeIdentity({String? keyAlias}) => _api.revokeIdentity(keyAlias);
+  Future<bool> revokeIdentity({String? keyAlias}) =>
+      _api.revokeIdentity(keyAlias);
 
   /// Revokes (deletes) all enrolled identities created by this plugin.
   Future<bool> revokeAllIdentities() => _api.revokeAllIdentities();
