@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'pages/home_page.dart';
 
 void main() {
@@ -15,10 +16,7 @@ class LocalBiometricExampleApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 2,
-        ),
+        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 2),
       ),
       home: const HomePage(),
     );

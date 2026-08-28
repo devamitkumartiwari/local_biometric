@@ -9,6 +9,7 @@ set(PLUGIN_NAME "local_biometric_plugin")
 
 list(APPEND PLUGIN_SOURCES
   "LocalBiometricPlugin.cpp"
+  "LocalNCryptDecryptor.cpp"
   "local_biometric_api.g.cpp"
 )
 

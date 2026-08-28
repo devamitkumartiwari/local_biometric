@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:local_biometric/local_biometric.dart';
 
@@ -15,6 +16,8 @@ class _SimpleAuthPageState extends State<SimpleAuthPage> {
   String _lastResult = 'Ready.';
   bool _allowPasscode = false;
   bool _isLockedOut = false;
+  bool _persistAcrossBackgrounding = false;
+  bool _sensitiveTransaction = false;
 
   @override
   void initState() {
@@ -26,20 +29,28 @@ class _SimpleAuthPageState extends State<SimpleAuthPage> {
 
   Future<void> _checkLockout() async {
     final availability = await _plugin.checkAvailability();
-    debugPrint('[LocalBiometric] Page Status: canAuth=${availability.canAuthenticate}, reason=${availability.reason}');
+    debugPrint(
+      '[LocalBiometric] Page Status: canAuth=${availability.canAuthenticate}, reason=${availability.reason}',
+    );
     if (mounted) {
       final wasLockedOut = _isLockedOut;
       setState(() {
-        _isLockedOut = availability.canAuthenticate == false && 
-                      (availability.reason?.toLowerCase().contains('lockout') ?? false);
+        _isLockedOut =
+            availability.canAuthenticate == false &&
+            (availability.reason?.toLowerCase().contains('lockout') ?? false);
         if (_isLockedOut) {
-          _lastResult = 'System detects biometric lockout (${availability.reason}).';
+          _lastResult =
+              'System detects biometric lockout (${availability.reason}).';
         }
       });
 
       if (_isLockedOut && !wasLockedOut) {
-        debugPrint('[LocalBiometric] Triggering Lockout Alert from background check');
-        _showLockoutAlert(isPermanent: availability.reason == 'lockedOutPermanent');
+        debugPrint(
+          '[LocalBiometric] Triggering Lockout Alert from background check',
+        );
+        _showLockoutAlert(
+          isPermanent: availability.reason == 'lockedOutPermanent',
+        );
       }
     }
   }
@@ -51,10 +62,16 @@ class _SimpleAuthPageState extends State<SimpleAuthPage> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(isPermanent || isIOS ? 'Biometrics Locked' : 'Biometrics Temporarily Locked'),
-          content: Text(isPermanent || isIOS 
-            ? 'Biometric authentication is locked. Passcode verification is required to re-enable it.'
-            : 'Biometric authentication is temporarily locked (30s). You can wait or verify with your passcode to unlock immediately.'),
+          title: Text(
+            isPermanent || isIOS
+                ? 'Biometrics Locked'
+                : 'Biometrics Temporarily Locked',
+          ),
+          content: Text(
+            isPermanent || isIOS
+                ? 'Biometric authentication is locked. Passcode verification is required to re-enable it.'
+                : 'Biometric authentication is temporarily locked (30s). You can wait or verify with your passcode to unlock immediately.',
+          ),
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel'),
@@ -76,26 +93,40 @@ class _SimpleAuthPageState extends State<SimpleAuthPage> {
   Future<void> _verify({bool recover = false}) async {
     setState(() {
       _isLoading = true;
-      _lastResult = recover ? 'Verifying passcode to unlock...' : 'Authenticating...';
+      _lastResult = recover
+          ? 'Verifying passcode to unlock...'
+          : 'Authenticating...';
     });
 
     try {
       final result = await _plugin.verifyPresence(
-        promptMessage: recover ? 'Verify passcode to re-enable biometrics' : 'Confirm your identity',
+        promptMessage: recover
+            ? 'Verify passcode to re-enable biometrics'
+            : 'Confirm your identity',
         config: PresencePromptConfig(
           allowDeviceCredentials: recover || _allowPasscode,
+          persistAcrossBackgrounding: recover
+              ? false
+              : _persistAcrossBackgrounding,
+          sensitiveTransaction: recover ? false : _sensitiveTransaction,
         ),
       );
-      
+
       setState(() {
         if (result.success == true) {
-          _lastResult = 'Success! Authenticated via ${result.authenticationType}';
+          _lastResult =
+              'Success! Authenticated via ${result.authenticationType}';
           _isLockedOut = false;
         } else {
           _lastResult = 'Failed: ${result.code}\nError: ${result.error}';
-          if (result.code == IdentityError.lockedOut || result.code == IdentityError.lockedOutPermanent) {
+          if (result.code == IdentityError.lockedOut ||
+              result.code == IdentityError.lockedOutPermanent) {
             _isLockedOut = true;
-            _showLockoutAlert(isPermanent: result.code == IdentityError.lockedOutPermanent || Platform.isIOS);
+            _showLockoutAlert(
+              isPermanent:
+                  result.code == IdentityError.lockedOutPermanent ||
+                  Platform.isIOS,
+            );
           }
         }
       });
@@ -140,13 +171,24 @@ class _SimpleAuthPageState extends State<SimpleAuthPage> {
                       children: [
                         Icon(Icons.lock_outline, color: Colors.red),
                         SizedBox(width: 8),
-                        Expanded(child: Text('Biometrics Locked. Passcode verification required to re-enable.', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
+                        Expanded(
+                          child: Text(
+                            'Biometrics Locked. Passcode verification required to re-enable.',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton(
                       onPressed: () => _verify(recover: true),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
                       child: const Text('UNLOCK WITH PASSCODE'),
                     ),
                   ],
@@ -156,20 +198,47 @@ class _SimpleAuthPageState extends State<SimpleAuthPage> {
             const SizedBox(height: 16),
             SwitchListTile(
               title: const Text('Allow Passcode Fallback'),
-              subtitle: const Text('If biometrics fail or are unavailable, allow using the device passcode.'),
+              subtitle: const Text(
+                'If biometrics fail or are unavailable, allow using the device passcode.',
+              ),
               value: _allowPasscode,
               onChanged: (v) => setState(() => _allowPasscode = v),
             ),
+            SwitchListTile(
+              title: const Text('Persist Across Backgrounding'),
+              subtitle: const Text(
+                'If the app is backgrounded mid-prompt, automatically retry on foreground instead of failing.',
+              ),
+              value: _persistAcrossBackgrounding,
+              onChanged: (v) => setState(() => _persistAcrossBackgrounding = v),
+            ),
+            SwitchListTile(
+              title: const Text('Sensitive Transaction (Android only)'),
+              subtitle: const Text(
+                'Requires explicit confirmation after a passive match (e.g. passive Face Unlock). No effect on iOS.',
+              ),
+              value: _sensitiveTransaction,
+              onChanged: (v) => setState(() => _sensitiveTransaction = v),
+            ),
             const Spacer(),
-            if (_isLoading)
-              const Center(child: CircularProgressIndicator())
-            else
+            if (_isLoading) ...[
+              const Center(child: CircularProgressIndicator()),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () => _plugin.stopAuthentication(),
+                icon: const Icon(Icons.cancel_outlined),
+                label: const Text('Cancel Prompt'),
+              ),
+            ] else
               ElevatedButton.icon(
                 onPressed: _isLockedOut ? null : _verify,
                 icon: const Icon(Icons.fingerprint),
                 label: const Padding(
                   padding: EdgeInsets.all(12),
-                  child: Text('Verify Presence', style: TextStyle(fontSize: 18)),
+                  child: Text(
+                    'Verify Presence',
+                    style: TextStyle(fontSize: 18),
+                  ),
                 ),
               ),
             const SizedBox(height: 16),

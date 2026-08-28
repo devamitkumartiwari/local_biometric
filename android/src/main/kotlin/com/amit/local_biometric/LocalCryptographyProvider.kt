@@ -78,6 +78,20 @@ class LocalCryptographyProvider(private val context: Context) {
         return entry.certificate.publicKey
     }
 
+    // The HYBRID_EC decrypt path's public key: the ephemeral EC public key persisted alongside
+    // the wrapped private key by sealDecryptionKey/enrollIdentity (LocalBiometricConstants.ecPubFilename).
+    // Not secret, so this is a plain file read -- no biometric prompt needed, letting
+    // getIdentityStatus report it cheaply.
+    fun getDecryptingPublicKey(keyAlias: String?): PublicKey? {
+        val file = File(context.filesDir, LocalBiometricConstants.ecPubFilename(keyAlias))
+        if (!file.exists()) return null
+        return try {
+            KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(file.readBytes()))
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun performHybridDecryption(
         keyAlias: String?,
         unwrapCipher: Cipher,

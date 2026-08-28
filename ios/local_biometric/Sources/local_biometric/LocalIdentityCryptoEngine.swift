@@ -4,7 +4,14 @@ import Security
 class LocalIdentityCryptoEngine {
 
     func formatKey(_ key: SecKey, format: IdentityKeyFormat) -> String {
-        guard let data = getSubjectPublicKeyInfo(for: key) else { return "" }
+        guard let data = subjectPublicKeyInfoData(for: key) else { return "" }
+        return formatKeyData(data, format: format)
+    }
+
+    // Formats already-DER-encoded SubjectPublicKeyInfo bytes, e.g. ones persisted earlier by
+    // `subjectPublicKeyInfoData(for:)` -- used for keys (like the wrapped RSA public key) whose
+    // SPKI bytes were computed once at enrollment time and saved, rather than a live SecKey ref.
+    func formatKeyData(_ data: Data, format: IdentityKeyFormat) -> String {
         switch format {
         case .base64, .raw: return data.base64EncodedString()
         case .hex: return data.map { String(format: "%02x", $0) }.joined()
@@ -21,7 +28,31 @@ class LocalIdentityCryptoEngine {
         }
     }
 
-    private func getSubjectPublicKeyInfo(for key: SecKey) -> Data? {
+    // Matches Android's LocalBiometricFormatUtils.parsePayload: base64 and raw both decode as
+    // base64 (there is no distinct raw-bytes wire format for the String-typed `payload` input),
+    // hex decodes as hex.
+    func decodePayload(_ payload: String, format: IdentityPayloadFormat) -> Data? {
+        switch format {
+        case .base64, .raw:
+            return Data(base64Encoded: payload)
+        case .hex:
+            return Self.hexDecode(payload)
+        }
+    }
+
+    private static func hexDecode(_ hex: String) -> Data? {
+        var data = Data(capacity: hex.count / 2)
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            guard let nextIndex = hex.index(index, offsetBy: 2, limitedBy: hex.endIndex),
+                  let byte = UInt8(hex[index..<nextIndex], radix: 16) else { return nil }
+            data.append(byte)
+            index = nextIndex
+        }
+        return data
+    }
+
+    func subjectPublicKeyInfoData(for key: SecKey) -> Data? {
         var error: Unmanaged<CFError>?
         guard let raw = SecKeyCopyExternalRepresentation(key, &error) as Data? else { return nil }
         guard let attrs = SecKeyCopyAttributes(key) as? [String: Any],

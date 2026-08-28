@@ -23,7 +23,8 @@ class LocalBiometricManager(private val context: Context) {
         keyAlias: String?,
         useDeviceCredentials: Boolean,
         invalidateOnEnrollment: Boolean,
-        enableDecryption: Boolean
+        enableDecryption: Boolean,
+        requireAuthentication: Boolean = true
     ): KeyPair {
         val alias = LocalBiometricConstants.identityKeyAlias(keyAlias)
         val purposes = if (enableDecryption) {
@@ -36,13 +37,17 @@ class LocalBiometricManager(private val context: Context) {
             .setDigests(KeyProperties.DIGEST_SHA256)
             .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
             .setAlgorithmParameterSpec(RSAKeyGenParameterSpec(2048, RSAKeyGenParameterSpec.F4))
-            .setUserAuthenticationRequired(true)
+            .setUserAuthenticationRequired(requireAuthentication)
 
         if (enableDecryption) {
             builder.setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_OAEP)
         }
 
-        configureAuth(builder, useDeviceCredentials, invalidateOnEnrollment)
+        // setInvalidatedByBiometricEnrollment/setUserAuthenticationParameters are meaningless (and
+        // some throw) on a key that doesn't require authentication at all.
+        if (requireAuthentication) {
+            configureAuth(builder, useDeviceCredentials, invalidateOnEnrollment)
+        }
         tryEnableStrongBox(builder)
 
         val kpg = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, LocalBiometricConstants.KEYSTORE_PROVIDER)
@@ -53,15 +58,18 @@ class LocalBiometricManager(private val context: Context) {
     fun generateEcKey(
         keyAlias: String?,
         useDeviceCredentials: Boolean,
-        invalidateOnEnrollment: Boolean
+        invalidateOnEnrollment: Boolean,
+        requireAuthentication: Boolean = true
     ): KeyPair {
         val alias = LocalBiometricConstants.identityKeyAlias(keyAlias)
         val builder = KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_SIGN)
             .setDigests(KeyProperties.DIGEST_SHA256)
             .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
-            .setUserAuthenticationRequired(true)
+            .setUserAuthenticationRequired(requireAuthentication)
 
-        configureAuth(builder, useDeviceCredentials, invalidateOnEnrollment)
+        if (requireAuthentication) {
+            configureAuth(builder, useDeviceCredentials, invalidateOnEnrollment)
+        }
         tryEnableStrongBox(builder)
 
         val kpg = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, LocalBiometricConstants.KEYSTORE_PROVIDER)

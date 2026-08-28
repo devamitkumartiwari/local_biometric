@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'local_biometric_api.pigeon.dart';
 
 export 'local_biometric_api.pigeon.dart';
+export 'src/identity_error_extensions.dart';
 
 /// A robust, efficient, and performant local biometric identity plugin for Flutter.
 ///
@@ -22,7 +23,16 @@ class LocalBiometric {
   /// (e.g. new biometrics enrolled).
   Stream<IdentityStatus> get onIdentityChanged {
     return _eventChannel.receiveBroadcastStream().map((event) {
-      return IdentityStatus.values[event as int];
+      // A switch expression (rather than positional `IdentityStatus.values[event as int]`
+      // indexing) tolerates native/Dart plugin version skew gracefully: an out-of-range or
+      // unrecognized raw value falls back to `unavailable` instead of throwing a
+      // RangeError that would kill the stream subscription.
+      return switch (event as int) {
+        0 => IdentityStatus.valid,
+        1 => IdentityStatus.changed,
+        2 => IdentityStatus.unavailable,
+        _ => IdentityStatus.unavailable,
+      };
     });
   }
 
@@ -130,4 +140,10 @@ class LocalBiometric {
 
   /// Acknowledges an identity status change reported by [onIdentityChanged].
   Future<void> acknowledgeIdentityChange() => _api.acknowledgeIdentityChange();
+
+  /// Cancels whatever biometric/credential prompt is currently in flight, if any.
+  ///
+  /// Returns `true` if a prompt was actually canceled, `false` if none was in flight or
+  /// cancellation isn't supported on this platform (not supported on Windows).
+  Future<bool> stopAuthentication() => _api.stopAuthentication();
 }

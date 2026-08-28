@@ -17,6 +17,9 @@ sealed interface LocalAuthOutcome {
 
 class LocalBiometricAuthenticator(private val context: Context) {
 
+    private var currentPrompt: BiometricPrompt? = null
+    private var currentContinuation: kotlinx.coroutines.CancellableContinuation<LocalAuthOutcome.Success>? = null
+
     fun detectBiometricTypes(): List<IdentityBiometricType> {
         val pm = context.packageManager
         val bm = BiometricManager.from(context)
@@ -37,15 +40,19 @@ class LocalBiometricAuthenticator(private val context: Context) {
         description: String?,
         cancelText: String,
         allowDeviceCredentials: Boolean,
-        cryptoObject: BiometricPrompt.CryptoObject?
+        cryptoObject: BiometricPrompt.CryptoObject?,
+        sensitiveTransaction: Boolean = false
     ): LocalAuthOutcome.Success = suspendCancellableCoroutine { cont ->
+        currentContinuation = cont
         val auths = getAuthenticators(allowDeviceCredentials)
         val callback = object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 if (cont.isActive) cont.resume(LocalAuthOutcome.Success(result.cryptoObject, mapAuthType(result.authenticationType)))
+                clearIfCurrent(cont)
             }
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 if (cont.isActive) cont.resumeWithException(SecurityException("$errString", Throwable(errorCode.toString())))
+                clearIfCurrent(cont)
             }
         }
 
@@ -55,6 +62,7 @@ class LocalBiometricAuthenticator(private val context: Context) {
             .apply {
                 if (!subtitle.isNullOrBlank()) setSubtitle(subtitle)
                 if (!description.isNullOrBlank()) setDescription(description)
+                if (sensitiveTransaction) setConfirmationRequired(true)
                 if (!(allowDeviceCredentials && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)) {
                     setNegativeButtonText(cancelText)
                 }
@@ -65,12 +73,42 @@ class LocalBiometricAuthenticator(private val context: Context) {
             try {
                 activity.setTheme(androidx.appcompat.R.style.Theme_AppCompat_Light_DarkActionBar)
                 val prompt = BiometricPrompt(activity, ContextCompat.getMainExecutor(activity), callback)
+                currentPrompt = prompt
                 if (cryptoObject != null) prompt.authenticate(promptInfo, cryptoObject)
                 else prompt.authenticate(promptInfo)
             } catch (e: Exception) {
                 if (cont.isActive) cont.resumeWithException(e)
+                clearIfCurrent(cont)
             }
         }
+
+        cont.invokeOnCancellation { clearIfCurrent(cont) }
+    }
+
+    private fun clearIfCurrent(cont: kotlinx.coroutines.CancellableContinuation<*>) {
+        if (currentContinuation === cont) {
+            currentContinuation = null
+            currentPrompt = null
+        }
+    }
+
+    // Resumes the in-flight authenticate() call, if any, with a `userCanceled`-coded failure
+    // (raw code "10", the same one BiometricPrompt itself uses for a user-pressed cancel button)
+    // *before* telling BiometricPrompt to dismiss. This disambiguates an explicit
+    // stopAuthentication() call from BiometricPrompt's own `ERROR_CANCELED` (5), which *also*
+    // fires when the system dismisses the prompt because the app was backgrounded (mapped
+    // separately, to `systemCanceled`, in LocalBiometricErrorMapper) -- both would otherwise
+    // arrive as the exact same raw error code with no way to tell them apart.
+    fun stopAuthentication(): Boolean {
+        val cont = currentContinuation ?: return false
+        val prompt = currentPrompt
+        currentContinuation = null
+        currentPrompt = null
+        if (cont.isActive) {
+            cont.resumeWithException(SecurityException("Stopped by caller", Throwable("10")))
+        }
+        prompt?.cancelAuthentication()
+        return true
     }
 
     fun getAuthenticators(allowDeviceCredentials: Boolean, strength: IdentityBiometricStrength = IdentityBiometricStrength.STRONG): Int {

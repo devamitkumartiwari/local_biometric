@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:local_biometric/local_biometric.dart';
 
@@ -11,9 +13,30 @@ class ManagementPage extends StatefulWidget {
 class _ManagementPageState extends State<ManagementPage> {
   final _plugin = LocalBiometric();
   final _aliasController = TextEditingController(text: 'secure_key_1');
-  
+
   bool _isLoading = false;
   String _lastResult = 'Ready.';
+  IdentityStatus _identityStatus = IdentityStatus.valid;
+  StreamSubscription<IdentityStatus>? _statusSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _statusSub = _plugin.onIdentityChanged.listen((status) {
+      if (mounted) setState(() => _identityStatus = status);
+    });
+  }
+
+  @override
+  void dispose() {
+    _statusSub?.cancel();
+    _aliasController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _acknowledgeChange() async {
+    await _plugin.acknowledgeIdentityChange();
+  }
 
   Future<void> _runAction(Future<dynamic> Function() action) async {
     setState(() {
@@ -37,11 +60,62 @@ class _ManagementPageState extends State<ManagementPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildIdentityStatusBanner(),
+          const SizedBox(height: 16),
           _buildKeyActionCard(),
           const SizedBox(height: 16),
           _buildGlobalActionCard(),
           const SizedBox(height: 16),
           _buildResultSection(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIdentityStatusBanner() {
+    final (
+      Color color,
+      IconData icon,
+      String label,
+    ) = switch (_identityStatus) {
+      IdentityStatus.valid => (
+        Colors.green,
+        Icons.check_circle_outline,
+        'Valid',
+      ),
+      IdentityStatus.changed => (
+        Colors.orange,
+        Icons.warning_amber_outlined,
+        'Changed',
+      ),
+      IdentityStatus.unavailable => (
+        Colors.grey,
+        Icons.help_outline,
+        'Unavailable',
+      ),
+    };
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Identity status: $label\n(from onIdentityChanged; flips to "Changed" after re-enrolling a biometric in Settings)',
+              style: TextStyle(color: color, fontWeight: FontWeight.bold),
+            ),
+          ),
+          if (_identityStatus == IdentityStatus.changed)
+            TextButton(
+              onPressed: _acknowledgeChange,
+              child: const Text('Acknowledge'),
+            ),
         ],
       ),
     );
@@ -54,26 +128,43 @@ class _ManagementPageState extends State<ManagementPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Single Key Actions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'Single Key Actions',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _aliasController,
-              decoration: const InputDecoration(labelText: 'Key Alias', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Key Alias',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => _runAction(() => _plugin.getIdentityStatus(keyAlias: _aliasController.text, checkValidity: true)),
+                    onPressed: () => _runAction(
+                      () => _plugin.getIdentityStatus(
+                        keyAlias: _aliasController.text,
+                        checkValidity: true,
+                      ),
+                    ),
                     child: const Text('Check Status'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => _runAction(() => _plugin.revokeIdentity(keyAlias: _aliasController.text)),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
+                    onPressed: () => _runAction(
+                      () => _plugin.revokeIdentity(
+                        keyAlias: _aliasController.text,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                    ),
                     child: const Text('Revoke Key'),
                   ),
                 ),
@@ -93,13 +184,24 @@ class _ManagementPageState extends State<ManagementPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Global Actions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red)),
+            const Text(
+              'Global Actions',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => _runAction(() => _plugin.revokeAllIdentities()),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                onPressed: () =>
+                    _runAction(() => _plugin.revokeAllIdentities()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
                 child: const Text('REVOKE ALL IDENTITIES'),
               ),
             ),
@@ -113,7 +215,10 @@ class _ManagementPageState extends State<ManagementPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Last Result:', style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text(
+          'Last Result:',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 4),
         Container(
           width: double.infinity,
@@ -122,9 +227,12 @@ class _ManagementPageState extends State<ManagementPage> {
             color: Colors.black.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: _isLoading 
-            ? const Center(child: CircularProgressIndicator())
-            : SelectableText(_lastResult, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SelectableText(
+                  _lastResult,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
         ),
       ],
     );

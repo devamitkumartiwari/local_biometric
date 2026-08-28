@@ -18,6 +18,12 @@ object LocalBiometricErrorMapper {
                 "12" -> return IdentityError.NOT_SUPPORTED // BiometricPrompt.ERROR_HW_NOT_PRESENT
                 "1" -> return IdentityError.NOT_AVAILABLE // BiometricPrompt.ERROR_HW_UNAVAILABLE
                 "14" -> return IdentityError.PASSCODE_NOT_SET // BiometricPrompt.ERROR_NO_DEVICE_CREDENTIAL
+                // BiometricPrompt.ERROR_CANCELED: fires when the system dismisses the prompt out
+                // from under the app (e.g. the app was backgrounded mid-prompt). An explicit
+                // stopAuthentication() call is resumed directly with code "10" *before* this
+                // code can fire (see LocalBiometricAuthenticator.stopAuthentication), so any "5"
+                // that actually reaches here was system-initiated, not caller-initiated.
+                "5" -> return IdentityError.SYSTEM_CANCELED
             }
         }
         

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:local_biometric/local_biometric.dart';
+
 import 'simple_auth_page.dart';
 import 'encrypted_auth_page.dart';
 import 'management_page.dart';
@@ -45,25 +46,37 @@ class _HomePageState extends State<HomePage> {
         children: [
           _buildStatusCard(),
           const SizedBox(height: 24),
-          const Text('Features', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Features',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           _buildFeatureTile(
             title: 'Simple Authentication',
             subtitle: 'Verify presence using biometrics (no keys)',
             icon: Icons.fingerprint,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SimpleAuthPage())),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SimpleAuthPage()),
+            ),
           ),
           _buildFeatureTile(
             title: 'Encrypted Authentication',
             subtitle: 'Enroll identities and sign payloads with keys',
             icon: Icons.enhanced_encryption,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EncryptedAuthPage())),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EncryptedAuthPage()),
+            ),
           ),
           _buildFeatureTile(
             title: 'Management',
             subtitle: 'Check identity status and revoke keys',
             icon: Icons.manage_accounts,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ManagementPage())),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ManagementPage()),
+            ),
           ),
         ],
       ),
@@ -82,17 +95,29 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Icon(Icons.info_outline, color: Colors.blue),
                 SizedBox(width: 8),
-                Text('System Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(
+                  'System Status',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             const Divider(),
             _buildStatusRow('Can Authenticate', _availability?.canAuthenticate),
-            _buildStatusRow('Biometrics Enrolled', _availability?.hasEnrolledBiometrics),
-            _buildStatusRow('Biometric Types', _availability?.availableBiometrics?.join(', ') ?? 'None'),
+            _buildStatusRow(
+              'Biometrics Enrolled',
+              _availability?.hasEnrolledBiometrics,
+            ),
+            _buildStatusRow(
+              'Biometric Types',
+              _availability?.availableBiometrics?.join(', ') ?? 'None',
+            ),
             if (_availability?.reason != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text('Reason: ${_availability!.reason}', style: const TextStyle(color: Colors.red, fontSize: 12)),
+                child: Text(
+                  'Reason: ${_availability!.reason}',
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
               ),
           ],
         ),
@@ -120,7 +145,12 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildFeatureTile({required String title, required String subtitle, required IconData icon, required VoidCallback onTap}) {
+  Widget _buildFeatureTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(

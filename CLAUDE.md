@@ -29,15 +29,29 @@ iOS/macOS deployment targets are iOS 16.0 / macOS 13.0 (set in both the podspecs
 
 ## Platform support status (important — don't assume parity)
 
-- **Android** and **iOS** are the complete, maintained implementations.
+- **Android** and **iOS** are the complete, maintained implementations, including real
+  `decryptPayload` and `onIdentityChanged`-detected biometric re-enrollment on both.
 - **macOS** shares the iOS Swift source, so it has the same feature set as iOS.
-- **Windows** is a partial implementation using `Windows.Security.Credentials.KeyCredentialManager`.
-  Several API methods are stubs that return a default/success value without doing real work:
-  `SignPayloadBytes`, `DecryptPayload`, `GetIdentityStatus`, `VerifyPresence` (see
-  `windows/LocalBiometricPlugin.cpp`). Don't assume a method that works on Android/iOS also works on
-  Windows — check the stub list first.
-- On iOS/macOS, `decryptPayload` is explicitly unimplemented (`LocalBiometricPlugin.swift`) and returns
-  `IdentityError.unknown` with `"Not implemented"`.
+- **Windows** is a partial implementation using `Windows.Security.Credentials.KeyCredentialManager`
+  for enroll/sign. `GetIdentityStatus`, `VerifyPresence`, `RevokeIdentity`, `RevokeAllIdentities`,
+  `IsDeviceSecure`, and `AcknowledgeIdentityChange` are still stubs that return a default/success
+  value without doing real work (see `windows/LocalBiometricPlugin.cpp`) — don't assume a method
+  that works on Android/iOS also works on Windows here.
+- **`DecryptPayload` on Windows relies on an unsupported, undocumented Windows API** —
+  `KeyCredentialManager` is sign-only by design, so decryption goes through the lower-level CNG
+  `NCrypt` API directly against the "Microsoft Passport Key Storage Provider"
+  (`windows/LocalNCryptDecryptor.cpp`), which requires setting an undocumented property
+  (`NgcCacheType`) to arm the Windows Hello prompt. There is no official Microsoft API reference
+  for this usage — the only precedent is third-party reverse engineering of `KeyCredentialManager`
+  itself, and Microsoft's own stated guidance is to use `KeyCredentialManager` instead (which can't
+  decrypt at all). This can behave inconsistently across Windows builds and may stop working
+  entirely after a future Windows update with no changelog entry to warn you — do not treat it as
+  equivalent in reliability to the Android/iOS decrypt paths. `SignPayloadBytes` is a real
+  implementation (not a stub) sharing `SignPayload`'s `KeyCredentialManager` code path.
+- `requireAuthentication: false`, `persistAcrossBackgrounding`, and `sensitiveTransaction` are all
+  no-ops on Windows (documented inline in `LocalBiometricPlugin.cpp`'s `StopAuthentication`, which
+  is itself unsupported there — `KeyCredentialManager`/the NCrypt path expose no cancellation
+  handle).
 
 ## Architecture
 
@@ -68,6 +82,21 @@ Pigeon's Dart output doesn't always match the locally installed Dart SDK's forma
 (observed drift: collapsed short enums, trailing commas) — run `dart format lib/` after regenerating so
 `pana`'s static-analysis score doesn't regress on formatting alone.
 
+**Kotlin/Swift codegen style**: this plugin is pinned to `pigeon: ^28.0.0`, which changed the
+default Kotlin/Swift generators to emit `suspend fun`/`async throws` for every `@async`-annotated
+`HostApi` method (older Pigeon versions emitted completion-handler/`callback` style). All
+`LocalBiometricApi` methods use plain `@async` and are implemented as `suspend fun`
+(`LocalBiometricPlugin.kt`) / `async throws` (`LocalBiometricPlugin.swift`) accordingly — do not
+add `@asyncCallback` to revert an individual method to callback style without a good reason, since
+that would make it inconsistent with every other method's calling convention. The C++ (Windows)
+generator has no such distinction; it always emits `std::function<void(ErrorOr<T>)>` callbacks
+regardless of the annotation, so `windows/LocalBiometricPlugin.cpp` is unaffected either way.
+
+Every generated method still follows the plugin's own convention of reporting recoverable failures
+*in-band* via the `code`/`error` fields on the returned result object, not by throwing — a thrown
+Kotlin/Swift error from a `HostApi` method is reserved for truly exceptional plugin-internal
+failures, not routine things like a locked-out sensor or a canceled prompt.
+
 ### Android (`android/src/main/kotlin/com/amit/local_biometric/`)
 
 - `LocalBiometricPlugin.kt` — Pigeon `LocalBiometricApi` implementation; wires Flutter lifecycle
@@ -79,9 +108,13 @@ Pigeon's Dart output doesn't always match the locally installed Dart SDK's forma
   Prefers StrongBox when the device supports it (`tryEnableStrongBox`).
 - `LocalCryptographyProvider` — builds `Cipher`/`Signature` crypto objects for `BiometricPrompt`, and
   implements the hybrid-EC decrypt path (EC key wraps/unwraps an AES master key used for the actual
-  payload decryption).
+  payload decryption). Also exposes `getDecryptingPublicKey` (reads the persisted ephemeral EC public
+  key file, no biometric prompt needed) so `getIdentityStatus` can report `decryptingPublicKey`/
+  `decryptingAlgorithm`/`decryptingKeySize` in `HYBRID_EC` mode.
 - `LocalBiometricAuthenticator` — wraps `androidx.biometric.BiometricPrompt` into a single
-  suspend-style `authenticate(...)` call, and detects available biometric sensor types.
+  suspend-style `authenticate(...)` call, and detects available biometric sensor types. Tracks the
+  in-flight `BiometricPrompt`/continuation so `stopAuthentication()` can cancel it, and supports
+  `sensitiveTransaction` (`setConfirmationRequired`).
 - `LocalBiometricErrorMapper` — maps platform exceptions/`BiometricManager` int codes to the shared
   `IdentityError` enum. Lockout codes are matched by raw int (`7`/`9`) rather than named constants
   because the meaning is stable across AndroidX biometric library versions where constant names
@@ -89,6 +122,10 @@ Pigeon's Dart output doesn't always match the locally installed Dart SDK's forma
 - `LocalIdentityChangeMonitor` — `EventChannel.StreamHandler` + `LifecycleObserver` that detects when
   the device's enrolled biometrics change and emits `IdentityStatus` events on
   `com.amit.local_biometric/changes`.
+- `LocalPendingAuthRetryObserver` — separate, single-purpose `LifecycleObserver` backing
+  `persistAcrossBackgrounding` (kept apart from `LocalIdentityChangeMonitor`, which has its own,
+  unrelated lifecycle-driven job). On `onResume`, unblocks any call parked awaiting the app returning
+  to foreground so it can retry from scratch.
 - `LocalBiometricConstants` — key alias / filename naming scheme shared across the above.
 
 Key generation always sets `setUserAuthenticationRequired(true)`; `EC_SIGN_ONLY` keys support signing
@@ -104,10 +141,27 @@ themselves. RSA keys can do decryption natively when `enableDecryption` is set.
   observed returning undocumented codes for lockout in some contexts — see the inline comments before
   changing this logic.
 - `LocalSecureIdentityStorage` — wraps Secure Enclave EC key creation/lookup/deletion
-  (`kSecAttrTokenIDSecureEnclave`) and persists a wrapped RSA blob alongside it for hybrid mode.
-- `LocalIdentityCryptoEngine` — key/signature formatting helpers (base64/pem/hex/raw).
+  (`kSecAttrTokenIDSecureEnclave`) and persists a wrapped RSA blob alongside it for hybrid mode. Also
+  persists the RSA public key's SPKI bytes separately (`saveRsaPublicKeySpki`/`getRsaPublicKeySpki`)
+  so `getIdentityStatus` can report it without unwrapping the private key (which would require a
+  biometric prompt), and persists an `LAContext.evaluatedPolicyDomainState` snapshot
+  (`saveDomainState`/`getDomainState`) used by `LocalIdentityChangeMonitor` to detect biometric
+  re-enrollment.
+- `LocalIdentityCryptoEngine` — key/signature formatting helpers (base64/pem/hex/raw), plus
+  `decodePayload` for parsing incoming ciphertext (`decryptPayload`).
 - `LocalIdentityChangeMonitor` — `FlutterStreamHandler` for the same change-notification event channel
-  as Android.
+  as Android. Unlike a hardware-invalidation probe (which iOS has no cheap equivalent of), this
+  compares the current `LAContext.evaluatedPolicyDomainState` against the baseline saved at
+  enrollment and emits `.changed` on a mismatch, sticky until `acknowledgeIdentityChange` clears it —
+  tracks only the default alias (a known limitation shared with Android's own multi-alias handling).
+- `LocalPendingAuthRetryWaiter` — backs `persistAcrossBackgrounding`; awaits
+  `UIApplication`/`NSApplication` `didBecomeActiveNotification` so an interrupted prompt-issuing call
+  can retry itself from scratch on foreground. Mirrors `LocalPendingAuthRetryObserver.kt` on Android.
+
+`decryptPayload` is fully implemented: RSA identities unwrap the ECIES-wrapped software RSA key (the
+same way `signPayload`'s RSA path does) then decrypt with RSA-OAEP-SHA256; EC-only identities decrypt
+directly against the Secure Enclave key via ECIES (`eciesEncryptionStandardX963SHA256AESGCM`). This is
+the encryption scheme server-side integrators must encrypt against.
 
 Because Secure Enclave only supports EC keys natively, RSA "identities" on iOS are actually implemented
 as: generate an EC key in the Secure Enclave, generate a software RSA key pair, encrypt the RSA private
@@ -137,6 +191,38 @@ its own mapper translating native errors into this enum — when adding a new fa
 enum in `pigeons/identity_messages.dart`, regenerate, then add matching cases in
 `LocalBiometricErrorMapper.kt` (Android) and the inline `mapCFError`/`LAError` switches in
 `LocalBiometricPlugin.swift` (iOS/macOS).
+
+`authenticationFailed`/`notInteractive` (added alongside `requireAuthentication`/
+`persistAcrossBackgrounding`/`stopAuthentication`/`sensitiveTransaction`) have real, distinct
+triggers on iOS/macOS (`LAError.authenticationFailed`/`.notInteractive`) but essentially no reachable
+trigger on Android today — AndroidX `BiometricPrompt` reports a single failed attempt via the
+non-terminal `onAuthenticationFailed()` callback (prompt stays open), not any of the terminal error
+codes this plugin maps a result from, so `authenticationFailed` is expected to be rare/unreached on
+Android. Don't "fix" this by inventing a mapping that doesn't correspond to real framework behavior.
+
+`systemCanceled` is what `persistAcrossBackgrounding` watches for to decide whether to retry: Android
+maps `BiometricPrompt.ERROR_CANCELED` (raw code `"5"`) to it, disambiguated from an explicit
+`stopAuthentication()` call (which resumes the waiting coroutine directly with `userCanceled` *before*
+`ERROR_CANCELED` can fire — see `LocalBiometricAuthenticator.stopAuthentication`'s doc comment, since
+Android reports both with the identical raw code). iOS maps `LAError.systemCancel`/`.appCancel` to it
+in `verifyPresence`/`enrollIdentity`'s inline switches, and `errSecInteractionNotAllowed` (best-effort,
+unverified against real-device behavior, unlike the `-7`/`-8` lockout codes elsewhere in this file
+which were empirically confirmed) in `mapKeyLookupFailure` for the `signPayload`/`decryptPayload` key-
+lookup path.
+
+### Security-sensitive config flags
+
+- **`IdentityEnrollmentConfig.requireAuthentication: false`** creates a key usable to sign/decrypt
+  with *no* biometric or passcode gating at all — "device has the key" binding only, not "user is
+  present." Default (`true`/unset) preserves today's behavior. Never suggest `false` as a default;
+  it's for narrow background/silent-operation use cases (e.g. periodic device-attestation pings), not
+  general signing/decryption.
+- **`persistAcrossBackgrounding`** (on all four config classes) retries the *entire* interrupted
+  operation from scratch on foreground, never resumes mid-flight. This matters most for
+  `signPayload`/`signPayloadBytes`/`decryptPayload`/`enrollIdentity`: a backgrounded Android
+  `Cipher`/`Signature` `CryptoObject` is not guaranteed safely resumable, so a retried call may
+  re-prompt from the very beginning rather than continuing silently — document this to app developers
+  if you build UI around it, don't assume it "just resumes."
 
 ## Common commands
 

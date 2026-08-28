@@ -1,3 +1,40 @@
+## 0.0.4
+
+* **Breaking (native codegen only, not the Dart API):** regenerated Pigeon output now targets
+  `suspend fun` (Kotlin) / `async throws` (Swift) instead of completion-handler style, matching
+  the locked `pigeon: ^28.0.0`. The public Dart API (`LocalBiometric`) is unaffected.
+* Implemented real `decryptPayload` on iOS/macOS (RSA-OAEP-SHA256 for RSA identities, ECIES for
+  EC-only identities) -- previously always returned `IdentityError.unknown`/"Not implemented".
+* `getIdentityStatus` on iOS/macOS now reports `algorithm`/`keySize`/`isHybridMode`/`publicKey`
+  (previously only `exists` was ever populated); Android's `getIdentityStatus` now also reports
+  `decryptingPublicKey`/`decryptingAlgorithm`/`decryptingKeySize` in `HYBRID_EC` mode.
+* `onIdentityChanged` now actually emits `IdentityStatus.changed` on iOS/macOS when biometrics are
+  re-enrolled (via `LAContext` domain-state comparison); previously it could only report
+  `valid`/`unavailable` there. `acknowledgeIdentityChange` is no longer a no-op on iOS/macOS.
+* Added `IdentityError.authenticationFailed` and `IdentityError.notInteractive` for finer-grained
+  failure reporting (see the enum's doc comments in `pigeons/identity_messages.dart`).
+* Added `IdentityEnrollmentConfig.requireAuthentication` -- when set to `false`, creates a key
+  usable without any biometric/passcode gating ("device has the key" binding only). Read the doc
+  comment before using this; it is a real security-model change, not a convenience default.
+* Added `persistAcrossBackgrounding` to `PresencePromptConfig`, `IdentitySignatureConfig`,
+  `IdentityDecryptConfig`, and `IdentityEnrollmentConfig` -- automatically retries the *entire*
+  operation from scratch if the app is backgrounded mid-prompt, instead of failing with
+  `systemCanceled`.
+* Added `PresencePromptConfig.sensitiveTransaction` (Android only) -- forces explicit confirmation
+  after a passive biometric match (e.g. passive Face Unlock).
+* Added `LocalBiometric.stopAuthentication()` to cancel an in-flight prompt (not supported on
+  Windows).
+* Fixed Windows `SignPayloadBytes`/`DecryptPayload`, which were empty-body stubs that never
+  resolved their Dart `Future`, hanging the caller forever. `SignPayload` now actually populates
+  `signature`/`publicKey`/`algorithm` on success (previously it reported success with an empty
+  result). **`DecryptPayload` on Windows now attempts real decryption via an undocumented,
+  unsupported Windows API** (`NCrypt` against the Passport Key Storage Provider) -- see the
+  Platform Support table in `README.md` and the warning in `CLAUDE.md` before relying on it; it may
+  stop working after a future Windows update with no warning.
+* Added `lib/src/identity_error_extensions.dart` (`IdentityErrorX` on `IdentityError`) with
+  `isRecoverable`/`userMessage` helpers, exported from the main library.
+* Loosened `meta`/`flutter_lints`/`pigeon` version constraints in `pubspec.yaml`.
+
 ## 0.0.3
 
 * Raised iOS/macOS deployment targets to iOS 16.0 / macOS 13.0 and bumped Swift to 6.0.
