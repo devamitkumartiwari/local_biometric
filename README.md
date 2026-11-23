@@ -39,8 +39,23 @@ import io.flutter.embedding.android.FlutterFragmentActivity
 class MainActivity : FlutterFragmentActivity()
 ```
 
-You don't need to add any permissions; they're added for you and never prompt the user. See
-[permissions](doc/advanced.md#android-permissions).
+**Android permissions.** The plugin uses two permissions:
+
+| Permission | Android version | Used for |
+|---|---|---|
+| `USE_BIOMETRIC` | 9+ (API 28+) | The system biometric prompt: fingerprint, face and iris. |
+| `USE_FINGERPRINT` | 7–8.1 (API 24–27) | Fingerprint on older phones, which have no biometric prompt. |
+
+Both are added to your app automatically, so you don't need to edit `AndroidManifest.xml`.
+Android grants them at install time, so the user never sees a permission dialog. You can still
+declare them yourself if you want them visible; that's harmless:
+
+```xml
+<uses-permission android:name="android.permission.USE_BIOMETRIC" />
+<uses-permission android:name="android.permission.USE_FINGERPRINT" />
+```
+
+[more about permissions](doc/advanced.md#android-permissions)
 
 **iOS:** add a Face ID reason to `ios/Runner/Info.plist`:
 
