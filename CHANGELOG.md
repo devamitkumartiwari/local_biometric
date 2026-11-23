@@ -1,7 +1,7 @@
 ## 0.0.5
 
 * **Android minimum lowered from API 28 to API 24 (Android 7.0)**, matching Flutter's default
-  `minSdkVersion`. See the README's Android section for per-OS-version feature differences.
+  `minSdkVersion`. See "Android version differences" in `doc/advanced.md`.
 * Flutter 3.50 support:
   * The example app moves to AGP 9.3.1, Gradle 9.5.0 and Kotlin 2.4.20. The old versions were
     below Flutter 3.50's hard minimums.
@@ -20,36 +20,6 @@
   * RSA-decrypted text is decoded explicitly as UTF-8.
   * The `onIdentityChanged` stream handler is cleared on engine detach.
 * Android: replaced deprecated `lifecycle-common-java8` with `lifecycle-common`.
-* iOS/macOS podspecs: metadata only, no source changes.
-  * `s.version` now matches the package version. It was a placeholder `1.0.0`.
-  * The placeholder homepage and author are replaced with the real ones.
-* Package contents:
-  * Removed the example app's `web/` and `linux/` folders, since the plugin supports neither
-    platform.
-  * Added a `.pubignore` that keeps the contributor-only `CLAUDE.md` out of the published
-    package. README links to it now point to GitHub.
-* Dev dependency `pigeon` is pinned back to `^28.0.0`, the version the generated code targets.
-  0.0.4 had loosened it to `>=27.0.0 <30.0.0`. No generated files changed.
-* Documentation reorganized:
-  * A short `README.md` with screenshots of the example app, a 4-step quick start, a features
-    table, and one short snippet plus an example link per feature.
-  * The full reference moved to the new `doc/advanced.md`. It covers:
-    * every config option, method parameter, output format and result field;
-    * all 18 error codes;
-    * server-side key, signature and encryption formats;
-    * the platform matrix and Android per-version differences;
-    * Windows notes and known issues.
-  * The Android permissions are now explained: `USE_BIOMETRIC` on API 28+ and `USE_FINGERPRINT`
-    on API 24–27. Both are merged automatically and need no runtime request.
-  * The example app hides the debug banner, which keeps screenshots clean.
-  * The screenshots load from GitHub and are excluded from the published package (`.pubignore`),
-    so they add nothing to its size.
-  * Corrected:
-    * `FlutterFragmentActivity` is not Flutter's default template.
-    * `stopAuthentication()` reports `systemCanceled` on iOS/macOS.
-    * `getIdentityStatus(checkValidity:)` is a real check only on iOS/macOS.
-    * The `showDialog` snippet now uses `builder:`.
-* No changes to the Dart API, the iOS/macOS/Windows code, or existing enrolled keys.
 
 ## 0.0.4
 
