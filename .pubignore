@@ -35,3 +35,5 @@ migrate_working_dir/
 # --- pub-only exclusions (a .pubignore replaces .gitignore for publishing, so the rules above are repeated) ---
 # Contributor / AI-assistant architecture notes; not useful to package users.
 /CLAUDE.md
+# Screenshots are shown in the README via GitHub raw URLs; no need to ship them.
+/doc/screenshots/

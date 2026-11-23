@@ -30,13 +30,20 @@
     package. README links to it now point to GitHub.
 * Dev dependency `pigeon` is pinned back to `^28.0.0`, the version the generated code targets.
   0.0.4 had loosened it to `>=27.0.0 <30.0.0`. No generated files changed.
-* README rewritten:
-  * Examples for every API and option, plus an end-to-end login example.
-  * A server-side integration section covering key, signature and encryption formats.
-  * The Android permissions explained: `USE_BIOMETRIC` on API 28+, `USE_FINGERPRINT` on
-    API 24–27. Both are merged automatically and need no runtime request.
-  * Full config and result references, an error table, and Android per-version differences.
-  * A "What's new" section.
+* Documentation reorganized:
+  * A short `README.md` with screenshots of the example app, a 4-step quick start, a features
+    table, and one short snippet plus an example link per feature.
+  * The full reference moved to the new `doc/advanced.md`. It covers:
+    * every config option, method parameter, output format and result field;
+    * all 18 error codes;
+    * server-side key, signature and encryption formats;
+    * the platform matrix and Android per-version differences;
+    * Windows notes and known issues.
+  * The Android permissions are now explained: `USE_BIOMETRIC` on API 28+ and `USE_FINGERPRINT`
+    on API 24–27. Both are merged automatically and need no runtime request.
+  * The example app hides the debug banner, which keeps screenshots clean.
+  * The screenshots load from GitHub and are excluded from the published package (`.pubignore`),
+    so they add nothing to its size.
   * Corrected:
     * `FlutterFragmentActivity` is not Flutter's default template.
     * `stopAuthentication()` reports `systemCanceled` on iOS/macOS.
