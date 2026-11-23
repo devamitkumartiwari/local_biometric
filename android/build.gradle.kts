@@ -1,9 +1,20 @@
 group = "com.amit.local_biometric"
-version = "0.0.1"
+version = "0.0.5"
 
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
+}
+
+// AGP 9+ compiles Kotlin itself ("built-in Kotlin"), on by default unless the host app sets
+// `android.builtInKotlin=false` (Flutter's current app template still does). Applying the Kotlin
+// Gradle Plugin on top of built-in Kotlin is what Flutter warns will become a build failure, but
+// apps on AGP 8, or with built-in Kotlin disabled, still need KGP to compile this plugin's Kotlin
+// sources. So apply KGP only when built-in Kotlin isn't active.
+val agpMajorVersion = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.substringBefore('.').toInt()
+val builtInKotlinEnabled = agpMajorVersion >= 9 &&
+    (findProperty("android.builtInKotlin")?.toString()?.toBooleanStrictOrNull() ?: true)
+if (!builtInKotlinEnabled) {
+    apply(plugin = "org.jetbrains.kotlin.android")
 }
 
 android {
@@ -22,20 +33,21 @@ android {
     }
 
     defaultConfig {
-        minSdk = 28
+        minSdk = 24
     }
 }
 
-kotlin {
+// Configured through the compile tasks rather than the `kotlin {}` extension accessor, which
+// only exists when KGP is applied in the `plugins {}` block; this works in both modes above.
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
 dependencies {
     implementation("androidx.biometric:biometric:1.4.0-alpha07")
     implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.lifecycle:lifecycle-common-java8:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-common:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
 }

@@ -25,7 +25,13 @@ class LocalBiometricPlugin : FlutterPlugin, LocalBiometricApi, ActivityAware {
     private lateinit var cryptoProvider: LocalCryptographyProvider
     private lateinit var authenticator: LocalBiometricAuthenticator
     private lateinit var changeMonitor: LocalIdentityChangeMonitor
+    private var changesChannel: EventChannel? = null
     private val retryObserver = LocalPendingAuthRetryObserver()
+
+    // True when an Activity is attached but it isn't a FragmentActivity (e.g. the app's
+    // MainActivity extends FlutterActivity instead of FlutterFragmentActivity). BiometricPrompt
+    // needs a FragmentActivity, so prompt-issuing calls fail; this lets them say why.
+    private var hostActivityIsNotFragment = false
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         appContext = binding.applicationContext
@@ -35,17 +41,21 @@ class LocalBiometricPlugin : FlutterPlugin, LocalBiometricApi, ActivityAware {
         changeMonitor = LocalIdentityChangeMonitor(appContext, identityManager)
 
         LocalBiometricApi.setUp(binding.binaryMessenger, this)
-        EventChannel(binding.binaryMessenger, "com.amit.local_biometric/changes")
-            .setStreamHandler(changeMonitor)
+        changesChannel = EventChannel(binding.binaryMessenger, "com.amit.local_biometric/changes").apply {
+            setStreamHandler(changeMonitor)
+        }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         LocalBiometricApi.setUp(binding.binaryMessenger, null)
+        changesChannel?.setStreamHandler(null)
+        changesChannel = null
         scope.cancel()
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity as? FragmentActivity
+        hostActivityIsNotFragment = activity == null
         activity?.lifecycle?.addObserver(changeMonitor)
         activity?.lifecycle?.addObserver(retryObserver)
     }
@@ -54,7 +64,19 @@ class LocalBiometricPlugin : FlutterPlugin, LocalBiometricApi, ActivityAware {
         activity?.lifecycle?.removeObserver(changeMonitor)
         activity?.lifecycle?.removeObserver(retryObserver)
         activity = null
+        hostActivityIsNotFragment = false
     }
+
+    private fun activityMissingMessage(): String =
+        if (hostActivityIsNotFragment) "Activity required: MainActivity must extend FlutterFragmentActivity"
+        else "Activity required"
+
+    // Keystore key generation (seconds for RSA on StrongBox), Keystore lookups, file I/O and the
+    // post-auth sign/doFinal are blocking binder/disk calls. Pigeon dispatches every method on
+    // Dispatchers.Main, so run that work here instead of on the UI thread. Only
+    // authenticator.authenticate() (BiometricPrompt) must stay on Main. JCA Signature/Cipher
+    // objects aren't thread-bound, so preparing them here and using them after the prompt is safe.
+    private suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
 
     override fun onDetachedFromActivityForConfigChanges() = onDetachedFromActivity()
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) = onAttachedToActivity(binding)
@@ -116,11 +138,11 @@ class LocalBiometricPlugin : FlutterPlugin, LocalBiometricApi, ActivityAware {
         keyFormat: IdentityKeyFormat,
         promptMessage: String?
     ): IdentityEnrollmentResult {
-        val act = activity ?: return IdentityEnrollmentResult(code = IdentityError.UNKNOWN, error = "Activity required")
+        val act = activity ?: return IdentityEnrollmentResult(code = IdentityError.UNKNOWN, error = activityMissingMessage())
 
         return withBackgroundRetry(config?.persistAcrossBackgrounding, { it.code == IdentityError.SYSTEM_CANCELED }) {
             try {
-                if (config?.failIfExists == true && identityManager.keyExists(keyAlias)) {
+                if (config?.failIfExists == true && io { identityManager.keyExists(keyAlias) }) {
                     return@withBackgroundRetry IdentityEnrollmentResult(code = IdentityError.KEY_ALREADY_EXISTS, error = "Identity already exists")
                 }
 
@@ -136,20 +158,26 @@ class LocalBiometricPlugin : FlutterPlugin, LocalBiometricApi, ActivityAware {
                     authType = outcome.authType
                 }
 
-                val kp = if (sigType == IdentitySignatureType.RSA) {
-                    identityManager.generateRsaKey(keyAlias, useCreds, invalidate, config?.enableDecryption ?: false, requireAuth)
-                } else {
-                    identityManager.generateEcKey(keyAlias, useCreds, invalidate, requireAuth)
+                val kp = io {
+                    if (sigType == IdentitySignatureType.RSA) {
+                        identityManager.generateRsaKey(keyAlias, useCreds, invalidate, config?.enableDecryption ?: false, requireAuth)
+                    } else {
+                        identityManager.generateEcKey(keyAlias, useCreds, invalidate, requireAuth)
+                    }
                 }
 
                 if (config?.enableDecryption == true && sigType == IdentitySignatureType.ECDSA) {
-                    identityManager.generateMasterKey(keyAlias, useCreds, invalidate)
-                    val cipher = cryptoProvider.getMasterCipherForEncryption(keyAlias)
+                    val cipher = io {
+                        identityManager.generateMasterKey(keyAlias, useCreds, invalidate)
+                        cryptoProvider.getMasterCipherForEncryption(keyAlias)
+                    }
                     val outcome = authenticator.authenticate(act, promptMessage ?: "Secure Identity", config?.promptSubtitle, config?.promptDescription, config?.cancelButtonText ?: "Cancel", useCreds, androidx.biometric.BiometricPrompt.CryptoObject(cipher))
-                    val (wrapped, pub) = cryptoProvider.sealDecryptionKey(outcome.cryptoObject!!.cipher!!)
-
-                    java.io.File(appContext.filesDir, LocalBiometricConstants.ecWrappedFilename(keyAlias)).writeBytes(wrapped)
-                    java.io.File(appContext.filesDir, LocalBiometricConstants.ecPubFilename(keyAlias)).writeBytes(pub)
+                    val pub = io {
+                        val (wrapped, pub) = cryptoProvider.sealDecryptionKey(outcome.cryptoObject!!.cipher!!)
+                        java.io.File(appContext.filesDir, LocalBiometricConstants.ecWrappedFilename(keyAlias)).writeBytes(wrapped)
+                        java.io.File(appContext.filesDir, LocalBiometricConstants.ecPubFilename(keyAlias)).writeBytes(pub)
+                        pub
+                    }
 
                     val decryptPub = KeyFactory.getInstance("EC").generatePublic(java.security.spec.X509EncodedKeySpec(pub))
                     buildEnrollmentResponse(kp.public, keyFormat, decryptPub, outcome.authType)
@@ -192,24 +220,24 @@ class LocalBiometricPlugin : FlutterPlugin, LocalBiometricApi, ActivityAware {
         keyFormat: IdentityKeyFormat,
         prompt: String?
     ): IdentitySignatureResult {
-        val act = activity ?: return IdentitySignatureResult(code = IdentityError.UNKNOWN, error = "Activity required")
+        val act = activity ?: return IdentitySignatureResult(code = IdentityError.UNKNOWN, error = activityMissingMessage())
         return withBackgroundRetry(config?.persistAcrossBackgrounding, { it.code == IdentityError.SYSTEM_CANCELED }) {
             try {
-                val mode = identityManager.inferKeyMode(alias) ?: throw SecurityException("Identity not found")
+                val mode = io { identityManager.inferKeyMode(alias) } ?: throw SecurityException("Identity not found")
                 val allowCreds = config?.allowDeviceCredentials ?: false
 
                 var attempt = 0
                 var response: IdentitySignatureResult
                 while (true) {
                     try {
-                        val crypto = cryptoProvider.prepareSignature(alias, mode)
+                        val crypto = io { cryptoProvider.prepareSignature(alias, mode) }
                         val outcome = authenticator.authenticate(act, prompt ?: "Sign", config?.promptSubtitle, config?.promptDescription, config?.cancelButtonText ?: "Cancel", allowCreds, crypto)
 
-                        val sig = outcome.cryptoObject!!.signature!!
-                        sig.update(data)
-                        val sigBytes = sig.sign()
-
-                        val pub = cryptoProvider.getPublicKey(alias)
+                        val (sigBytes, pub) = io {
+                            val sig = outcome.cryptoObject!!.signature!!
+                            sig.update(data)
+                            sig.sign() to cryptoProvider.getPublicKey(alias)
+                        }
                         response = buildSignatureResponse(sigBytes, pub, sigFormat, keyFormat, outcome.authType)
                         break
                     } catch (e: Exception) {
@@ -234,26 +262,28 @@ class LocalBiometricPlugin : FlutterPlugin, LocalBiometricApi, ActivityAware {
         config: IdentityDecryptConfig?,
         promptMessage: String?
     ): IdentityDecryptResult {
-        val act = activity ?: return IdentityDecryptResult(code = IdentityError.UNKNOWN, error = "Activity required")
+        val act = activity ?: return IdentityDecryptResult(code = IdentityError.UNKNOWN, error = activityMissingMessage())
         return withBackgroundRetry(config?.persistAcrossBackgrounding, { it.code == IdentityError.SYSTEM_CANCELED }) {
             try {
-                val mode = identityManager.inferKeyMode(keyAlias) ?: throw SecurityException("Identity not found")
+                val mode = io { identityManager.inferKeyMode(keyAlias) } ?: throw SecurityException("Identity not found")
                 val allowCreds = config?.allowDeviceCredentials ?: false
                 val prompt = promptMessage ?: "Decrypt"
 
                 when (mode) {
                     LocalKeyMode.RSA -> {
-                        val ks = KeyStore.getInstance(LocalBiometricConstants.KEYSTORE_PROVIDER).apply { load(null) }
-                        val entry = ks.getEntry(LocalBiometricConstants.identityKeyAlias(keyAlias), null) as KeyStore.PrivateKeyEntry
-                        val cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding").apply { init(Cipher.DECRYPT_MODE, entry.privateKey) }
+                        val cipher = io {
+                            val ks = KeyStore.getInstance(LocalBiometricConstants.KEYSTORE_PROVIDER).apply { load(null) }
+                            val entry = ks.getEntry(LocalBiometricConstants.identityKeyAlias(keyAlias), null) as KeyStore.PrivateKeyEntry
+                            Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding").apply { init(Cipher.DECRYPT_MODE, entry.privateKey) }
+                        }
                         val outcome = authenticator.authenticate(act, prompt, config?.promptSubtitle, config?.promptDescription, config?.cancelButtonText ?: "Cancel", allowCreds, androidx.biometric.BiometricPrompt.CryptoObject(cipher))
-                        val decrypted = outcome.cryptoObject!!.cipher!!.doFinal(LocalBiometricFormatUtils.parsePayload(payload, payloadFormat))
-                        IdentityDecryptResult(decryptedData = String(decrypted), code = IdentityError.SUCCESS, authenticationType = outcome.authType)
+                        val decrypted = io { outcome.cryptoObject!!.cipher!!.doFinal(LocalBiometricFormatUtils.parsePayload(payload, payloadFormat)) }
+                        IdentityDecryptResult(decryptedData = String(decrypted, Charsets.UTF_8), code = IdentityError.SUCCESS, authenticationType = outcome.authType)
                     }
                     LocalKeyMode.HYBRID_EC -> {
-                        val cipher = cryptoProvider.getMasterCipherForDecryption(keyAlias) ?: throw SecurityException("Master key missing")
+                        val cipher = io { cryptoProvider.getMasterCipherForDecryption(keyAlias) } ?: throw SecurityException("Master key missing")
                         val outcome = authenticator.authenticate(act, prompt, config?.promptSubtitle, config?.promptDescription, config?.cancelButtonText ?: "Cancel", allowCreds, androidx.biometric.BiometricPrompt.CryptoObject(cipher))
-                        val decrypted = cryptoProvider.performHybridDecryption(keyAlias, outcome.cryptoObject!!.cipher!!, payload, payloadFormat)
+                        val decrypted = io { cryptoProvider.performHybridDecryption(keyAlias, outcome.cryptoObject!!.cipher!!, payload, payloadFormat) }
                         IdentityDecryptResult(decryptedData = decrypted, code = IdentityError.SUCCESS, authenticationType = outcome.authType)
                     }
                     else -> throw SecurityException("Identity does not support decryption")
@@ -265,16 +295,20 @@ class LocalBiometricPlugin : FlutterPlugin, LocalBiometricApi, ActivityAware {
     }
 
     override suspend fun revokeIdentity(keyAlias: String?): Boolean {
-        identityManager.deleteIdentity(keyAlias)
+        io { identityManager.deleteIdentity(keyAlias) }
         return true
     }
 
     override suspend fun revokeAllIdentities(): Boolean {
-        identityManager.deleteAllIdentities()
+        io { identityManager.deleteAllIdentities() }
         return true
     }
 
-    override suspend fun getIdentityStatus(keyAlias: String?, checkValidity: Boolean, keyFormat: IdentityKeyFormat): IdentityInfo {
+    override suspend fun getIdentityStatus(keyAlias: String?, checkValidity: Boolean, keyFormat: IdentityKeyFormat): IdentityInfo = io {
+        getIdentityStatusBlocking(keyAlias, keyFormat)
+    }
+
+    private fun getIdentityStatusBlocking(keyAlias: String?, keyFormat: IdentityKeyFormat): IdentityInfo {
         return try {
             val exists = identityManager.keyExists(keyAlias)
             if (!exists) return IdentityInfo(exists = false)
@@ -300,12 +334,13 @@ class LocalBiometricPlugin : FlutterPlugin, LocalBiometricApi, ActivityAware {
     }
 
     override suspend fun verifyPresence(promptMessage: String, config: PresencePromptConfig?): PresencePromptResult {
-        val act = activity ?: return PresencePromptResult(success = false, error = "Activity required", code = IdentityError.PROMPT_ERROR)
+        val act = activity ?: return PresencePromptResult(success = false, error = activityMissingMessage(), code = IdentityError.PROMPT_ERROR)
         return withBackgroundRetry(config?.persistAcrossBackgrounding, { it.code == IdentityError.SYSTEM_CANCELED }) {
             try {
                 val allowCreds = config?.allowDeviceCredentials ?: false
                 val sensitive = config?.sensitiveTransaction ?: false
-                val outcome = authenticator.authenticate(act, promptMessage, config?.subtitle, config?.promptDescription, config?.cancelButtonText ?: "Cancel", allowCreds, null, sensitive)
+                val strength = config?.biometricStrength ?: IdentityBiometricStrength.STRONG
+                val outcome = authenticator.authenticate(act, promptMessage, config?.subtitle, config?.promptDescription, config?.cancelButtonText ?: "Cancel", allowCreds, null, sensitive, strength)
                 PresencePromptResult(success = true, code = IdentityError.SUCCESS, authenticationType = outcome.authType)
             } catch (e: Exception) {
                 PresencePromptResult(success = false, error = LocalBiometricErrorMapper.safeErrorMessage(e), code = LocalBiometricErrorMapper.mapToIdentityError(e))

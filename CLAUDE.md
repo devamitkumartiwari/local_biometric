@@ -128,6 +128,23 @@ failures, not routine things like a locked-out sensor or a canceled prompt.
   to foreground so it can retry from scratch.
 - `LocalBiometricConstants` — key alias / filename naming scheme shared across the above.
 
+**Android minSdk is 24** (Flutter's own default; androidx.biometric's floor is 23). Every API above
+24 must stay behind a `Build.VERSION.SDK_INT` check: StrongBox (28), `setUserAuthenticationParameters`
+and `STRONG | DEVICE_CREDENTIAL` (30). Run `./gradlew :local_biometric:lintDebug` from
+`example/android` and keep `NewApi` at zero. Keep `appcompat`: the
+`Theme_AppCompat` set in `LocalBiometricAuthenticator.authenticate` is what lets androidx's
+fingerprint dialog render on API 24–27.
+
+**Threading:** Pigeon dispatches every `LocalBiometricApi` method on `Dispatchers.Main`. Keystore
+key generation and lookups, file I/O, and the post-prompt `sign()`/`doFinal()` go through the
+plugin's `io { }` helper (`Dispatchers.IO`). Only `authenticator.authenticate()` (BiometricPrompt)
+stays on Main.
+
+**Gradle/Kotlin:** `android/build.gradle.kts` applies the Kotlin Gradle Plugin only when AGP 9's
+built-in Kotlin is inactive (AGP < 9, or the app sets `android.builtInKotlin=false`). Configure
+Kotlin through `tasks.withType<KotlinCompile>`, not the `kotlin {}` accessor, so both modes keep
+compiling.
+
 Key generation always sets `setUserAuthenticationRequired(true)`; `EC_SIGN_ONLY` keys support signing
 only, `HYBRID_EC` mode additionally has a wrapped AES master key on disk (`filesDir`) enabling
 decryption via an EC-key-protected envelope, since Android Keystore EC keys can't do decryption

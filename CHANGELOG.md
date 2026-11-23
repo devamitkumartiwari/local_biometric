@@ -1,3 +1,49 @@
+## 0.0.5
+
+* **Android minimum lowered from API 28 to API 24 (Android 7.0)**, matching Flutter's default
+  `minSdkVersion`. See the README's Android section for per-OS-version feature differences.
+* Flutter 3.50 support:
+  * The example app moves to AGP 9.3.1, Gradle 9.5.0 and Kotlin 2.4.20. The old versions were
+    below Flutter 3.50's hard minimums.
+  * The plugin now applies the Kotlin Gradle Plugin only when AGP 9's built-in Kotlin is off.
+    This clears Flutter's "plugins that apply KGP will fail" warning and keeps AGP 8 apps working.
+* Android performance: Keystore key generation, key lookups, file I/O and the post-prompt
+  sign/decrypt now run on `Dispatchers.IO` instead of the UI thread. RSA key generation on
+  StrongBox could freeze the UI for seconds.
+* Android: the identity-change check on every resume is skipped when nothing listens to
+  `onIdentityChanged`, and no longer stacks on rapid resumes.
+* Android fixes:
+  * `PresencePromptConfig.biometricStrength` was ignored and is now honored. `weak` +
+    `allowDeviceCredentials` now offers PIN/pattern fallback below API 30.
+  * Concurrent `persistAcrossBackgrounding` calls no longer orphan each other.
+  * A host activity that isn't a `FlutterFragmentActivity` now gets an explicit error message.
+  * RSA-decrypted text is decoded explicitly as UTF-8.
+  * The `onIdentityChanged` stream handler is cleared on engine detach.
+* Android: replaced deprecated `lifecycle-common-java8` with `lifecycle-common`.
+* iOS/macOS podspecs: metadata only, no source changes.
+  * `s.version` now matches the package version. It was a placeholder `1.0.0`.
+  * The placeholder homepage and author are replaced with the real ones.
+* Package contents:
+  * Removed the example app's `web/` and `linux/` folders, since the plugin supports neither
+    platform.
+  * Added a `.pubignore` that keeps the contributor-only `CLAUDE.md` out of the published
+    package. README links to it now point to GitHub.
+* Dev dependency `pigeon` is pinned back to `^28.0.0`, the version the generated code targets.
+  0.0.4 had loosened it to `>=27.0.0 <30.0.0`. No generated files changed.
+* README rewritten:
+  * Examples for every API and option, plus an end-to-end login example.
+  * A server-side integration section covering key, signature and encryption formats.
+  * The Android permissions explained: `USE_BIOMETRIC` on API 28+, `USE_FINGERPRINT` on
+    API 24–27. Both are merged automatically and need no runtime request.
+  * Full config and result references, an error table, and Android per-version differences.
+  * A "What's new" section.
+  * Corrected:
+    * `FlutterFragmentActivity` is not Flutter's default template.
+    * `stopAuthentication()` reports `systemCanceled` on iOS/macOS.
+    * `getIdentityStatus(checkValidity:)` is a real check only on iOS/macOS.
+    * The `showDialog` snippet now uses `builder:`.
+* No changes to the Dart API, the iOS/macOS/Windows code, or existing enrolled keys.
+
 ## 0.0.4
 
 * **Breaking (native codegen only, not the Dart API):** regenerated Pigeon output now targets

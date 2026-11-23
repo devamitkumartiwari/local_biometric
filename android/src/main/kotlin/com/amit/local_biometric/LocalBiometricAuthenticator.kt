@@ -41,10 +41,15 @@ class LocalBiometricAuthenticator(private val context: Context) {
         cancelText: String,
         allowDeviceCredentials: Boolean,
         cryptoObject: BiometricPrompt.CryptoObject?,
-        sensitiveTransaction: Boolean = false
+        sensitiveTransaction: Boolean = false,
+        strength: IdentityBiometricStrength = IdentityBiometricStrength.STRONG
     ): LocalAuthOutcome.Success = suspendCancellableCoroutine { cont ->
         currentContinuation = cont
-        val auths = getAuthenticators(allowDeviceCredentials)
+        // A CryptoObject-bound prompt must always be BIOMETRIC_STRONG (Keystore keys only accept
+        // class-3 auth), whatever the caller asked for.
+        val effectiveStrength = if (cryptoObject != null) IdentityBiometricStrength.STRONG else strength
+        val auths = getAuthenticators(allowDeviceCredentials, effectiveStrength)
+        val credentialAllowed = (auths and BiometricManager.Authenticators.DEVICE_CREDENTIAL) != 0
         val callback = object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 if (cont.isActive) cont.resume(LocalAuthOutcome.Success(result.cryptoObject, mapAuthType(result.authenticationType)))
@@ -63,7 +68,8 @@ class LocalBiometricAuthenticator(private val context: Context) {
                 if (!subtitle.isNullOrBlank()) setSubtitle(subtitle)
                 if (!description.isNullOrBlank()) setDescription(description)
                 if (sensitiveTransaction) setConfirmationRequired(true)
-                if (!(allowDeviceCredentials && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)) {
+                // androidx throws if a negative button is set while device credential is allowed.
+                if (!credentialAllowed) {
                     setNegativeButtonText(cancelText)
                 }
             }
@@ -111,9 +117,16 @@ class LocalBiometricAuthenticator(private val context: Context) {
         return true
     }
 
+    // Allowed-authenticator combinations per androidx.biometric's PromptInfo rules:
+    // - BIOMETRIC_STRONG | DEVICE_CREDENTIAL is only supported on API 30+, so below 30 a STRONG
+    //   request with credentials silently falls back to biometric-only (unchanged behavior).
+    // - BIOMETRIC_WEAK | DEVICE_CREDENTIAL is supported on every API level, so a WEAK presence
+    //   check (never a crypto one -- see authenticate()) can offer PIN/pattern fallback below 30.
     fun getAuthenticators(allowDeviceCredentials: Boolean, strength: IdentityBiometricStrength = IdentityBiometricStrength.STRONG): Int {
         val bio = if (strength == IdentityBiometricStrength.STRONG) BiometricManager.Authenticators.BIOMETRIC_STRONG else BiometricManager.Authenticators.BIOMETRIC_WEAK
-        return if (allowDeviceCredentials && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) bio or BiometricManager.Authenticators.DEVICE_CREDENTIAL else bio
+        if (!allowDeviceCredentials) return bio
+        val credentialSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R || strength == IdentityBiometricStrength.WEAK
+        return if (credentialSupported) bio or BiometricManager.Authenticators.DEVICE_CREDENTIAL else bio
     }
 
     private fun mapAuthType(type: Int): IdentityAuthType {

@@ -11,12 +11,15 @@ import kotlinx.coroutines.CompletableDeferred
 // mid-operation is not guaranteed safely resumable after a backgrounding interruption, so a full
 // retry is the only safe option. Kept separate from LocalIdentityChangeMonitor, which has its own,
 // unrelated lifecycle-driven job (detecting biometric re-enrollment).
+//
+// Concurrent waiters share one deferred, so every parked call is released by the same onResume
+// (a second awaitResume() must not orphan the first). All access happens on the main thread
+// (lifecycle callbacks and the plugin's Dispatchers.Main scope), so no extra locking is needed.
 class LocalPendingAuthRetryObserver : DefaultLifecycleObserver {
     private var pending: CompletableDeferred<Unit>? = null
 
     suspend fun awaitResume() {
-        val deferred = CompletableDeferred<Unit>()
-        pending = deferred
+        val deferred = pending?.takeIf { !it.isCompleted } ?: CompletableDeferred<Unit>().also { pending = it }
         deferred.await()
     }
 

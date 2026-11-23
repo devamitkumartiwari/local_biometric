@@ -23,8 +23,15 @@ class LocalIdentityChangeMonitor(private val context: Context, private val ident
         eventSink = null
     }
 
+    private var resumeScan: Job? = null
+
+    // The scan does a Keystore getEntry + initSign per identity, so skip it when nobody is
+    // listening (onListen runs a fresh scan anyway, and nothing else reads the sticky flag) and
+    // don't stack a second scan on rapid resume bursts. onListen/acknowledgeChange always scan.
     override fun onResume(owner: LifecycleOwner) {
-        checkAndEmit()
+        if (eventSink == null) return
+        if (resumeScan?.isActive == true) return
+        resumeScan = checkAndEmit()
     }
 
     fun acknowledgeChange() {
@@ -35,8 +42,8 @@ class LocalIdentityChangeMonitor(private val context: Context, private val ident
         checkAndEmit()
     }
 
-    private fun checkAndEmit() {
-        scope.launch {
+    private fun checkAndEmit(): Job {
+        return scope.launch {
             val status = withContext(Dispatchers.IO) {
                 val prefs = context.getSharedPreferences(LocalBiometricConstants.identityStatusFilename(), Context.MODE_PRIVATE)
                 if (prefs.getBoolean("has_changed", false)) return@withContext IdentityStatus.CHANGED

@@ -167,7 +167,8 @@ class LocalBiometricManager(private val context: Context) {
             builder.setUserAuthenticationValidityDurationSeconds(-1)
         }
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && invalidateOnEnrollment) {
+        // minSdk is 24 (N), so setInvalidatedByBiometricEnrollment is always available.
+        if (invalidateOnEnrollment) {
             builder.setInvalidatedByBiometricEnrollment(true)
         }
     }

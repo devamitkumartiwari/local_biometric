@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.amit.local_biometric_example"
-        minSdk = 28
+        minSdk = 24
         targetSdk = 37
         versionCode = flutter.versionCode
         versionName = flutter.versionName
