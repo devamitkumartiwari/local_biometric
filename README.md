@@ -376,6 +376,10 @@ More in [Limitations & known issues](doc/advanced.md#limitations--known-issues).
 - **Smoother on Android:** key creation and crypto no longer run on the UI thread.
 - **Fixes:** `biometricStrength` now works, and PIN fallback for presence checks now works on
   Android 7–10.
+- **iOS/macOS: Swift Package Manager only.** The CocoaPods podspecs are gone; apps need SPM
+  turned on. Other plugins in your app can still use CocoaPods.
+- **Newer Android libraries:** `androidx.biometric` 1.4.0-rc01 (was an alpha), `appcompat`
+  1.8.0, `lifecycle-common` 2.11.1.
 - No changes to the Dart API, iOS, macOS or Windows code, or existing keys.
 
 See [CHANGELOG.md](CHANGELOG.md) for everything.

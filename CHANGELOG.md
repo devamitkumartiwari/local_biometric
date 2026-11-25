@@ -1,4 +1,4 @@
-## Unreleased
+## 0.0.5
 
 * **Breaking (iOS/macOS): CocoaPods support removed.** The plugin now ships only as a Swift
   package, so apps need Swift Package Manager turned on (`flutter config
@@ -6,9 +6,8 @@
   in your app can still use CocoaPods.
 * Android: `androidx.biometric` 1.4.0-alpha07 → 1.4.0-rc01, `appcompat` 1.7.0 → 1.8.0,
   `lifecycle-common` 2.8.7 → 2.11.1.
-
-## 0.0.5
-
+* Example app: Swift Package Manager only (no Podfile), new lightweight icon, named "Local
+  Biometric", and the Simple Authentication page now scrolls on small screens.
 * **Android minimum lowered from API 28 to API 24 (Android 7.0)**, matching Flutter's default
   `minSdkVersion`. See "Android version differences" in `doc/advanced.md`.
 * Flutter 3.50 support:
