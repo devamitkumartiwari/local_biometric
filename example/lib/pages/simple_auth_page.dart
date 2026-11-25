@@ -143,120 +143,114 @@ class _SimpleAuthPageState extends State<SimpleAuthPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Simple Authentication')),
-      body: Padding(
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'Simple authentication verifies the user\'s presence using biometrics or device credentials. It does not involve cryptographic keys.',
-                ),
+        children: [
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Simple authentication verifies the user\'s presence using biometrics or device credentials. It does not involve cryptographic keys.',
               ),
             ),
-            if (_isLockedOut) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red),
-                ),
-                child: Column(
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.lock_outline, color: Colors.red),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Biometrics Locked. Passcode verification required to re-enable.',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: () => _verify(recover: true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('UNLOCK WITH PASSCODE'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            SwitchListTile(
-              title: const Text('Allow Passcode Fallback'),
-              subtitle: const Text(
-                'If biometrics fail or are unavailable, allow using the device passcode.',
-              ),
-              value: _allowPasscode,
-              onChanged: (v) => setState(() => _allowPasscode = v),
-            ),
-            SwitchListTile(
-              title: const Text('Persist Across Backgrounding'),
-              subtitle: const Text(
-                'If the app is backgrounded mid-prompt, automatically retry on foreground instead of failing.',
-              ),
-              value: _persistAcrossBackgrounding,
-              onChanged: (v) => setState(() => _persistAcrossBackgrounding = v),
-            ),
-            SwitchListTile(
-              title: const Text('Sensitive Transaction (Android only)'),
-              subtitle: const Text(
-                'Requires explicit confirmation after a passive match (e.g. passive Face Unlock). No effect on iOS.',
-              ),
-              value: _sensitiveTransaction,
-              onChanged: (v) => setState(() => _sensitiveTransaction = v),
-            ),
-            const Spacer(),
-            if (_isLoading) ...[
-              const Center(child: CircularProgressIndicator()),
-              const SizedBox(height: 12),
-              TextButton.icon(
-                onPressed: () => _plugin.stopAuthentication(),
-                icon: const Icon(Icons.cancel_outlined),
-                label: const Text('Cancel Prompt'),
-              ),
-            ] else
-              ElevatedButton.icon(
-                onPressed: _isLockedOut ? null : _verify,
-                icon: const Icon(Icons.fingerprint),
-                label: const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Text(
-                    'Verify Presence',
-                    style: TextStyle(fontSize: 18),
-                  ),
-                ),
-              ),
+          ),
+          if (_isLockedOut) ...[
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey[200],
+                color: Colors.red[50],
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red),
               ),
-              child: Text(
-                _lastResult,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontFamily: 'monospace'),
+              child: Column(
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.lock_outline, color: Colors.red),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Biometrics Locked. Passcode verification required to re-enable.',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => _verify(recover: true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('UNLOCK WITH PASSCODE'),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 32),
           ],
-        ),
+          const SizedBox(height: 16),
+          SwitchListTile(
+            title: const Text('Allow Passcode Fallback'),
+            subtitle: const Text(
+              'If biometrics fail or are unavailable, allow using the device passcode.',
+            ),
+            value: _allowPasscode,
+            onChanged: (v) => setState(() => _allowPasscode = v),
+          ),
+          SwitchListTile(
+            title: const Text('Persist Across Backgrounding'),
+            subtitle: const Text(
+              'If the app is backgrounded mid-prompt, automatically retry on foreground instead of failing.',
+            ),
+            value: _persistAcrossBackgrounding,
+            onChanged: (v) => setState(() => _persistAcrossBackgrounding = v),
+          ),
+          SwitchListTile(
+            title: const Text('Sensitive Transaction (Android only)'),
+            subtitle: const Text(
+              'Requires explicit confirmation after a passive match (e.g. passive Face Unlock). No effect on iOS.',
+            ),
+            value: _sensitiveTransaction,
+            onChanged: (v) => setState(() => _sensitiveTransaction = v),
+          ),
+          const SizedBox(height: 24),
+          if (_isLoading) ...[
+            const Center(child: CircularProgressIndicator()),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () => _plugin.stopAuthentication(),
+              icon: const Icon(Icons.cancel_outlined),
+              label: const Text('Cancel Prompt'),
+            ),
+          ] else
+            ElevatedButton.icon(
+              onPressed: _isLockedOut ? null : _verify,
+              icon: const Icon(Icons.fingerprint),
+              label: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('Verify Presence', style: TextStyle(fontSize: 18)),
+              ),
+            ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _lastResult,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontFamily: 'monospace'),
+            ),
+          ),
+          const SizedBox(height: 32),
+        ],
       ),
     );
   }
