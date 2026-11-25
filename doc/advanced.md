@@ -64,7 +64,10 @@ Without this, every prompt-issuing call fails with the error message
 ### iOS
 
 `NSFaceIDUsageDescription` in `Info.plist` is required. Without it, Face ID prompts fail.
-CocoaPods and Swift Package Manager are both supported. The plugin is UIScene-safe.
+Swift Package Manager only (`flutter config --enable-swift-package-manager`). There is no podspec,
+so an app with SPM turned off can't use this plugin on iOS or macOS. Apps with SPM on work even if
+other plugins they use are CocoaPods-only. The
+plugin is UIScene-safe.
 
 ---
 

@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:local_biometric/local_biometric.dart';
 
 class EncryptedAuthPage extends StatefulWidget {
@@ -276,22 +276,22 @@ class _EncryptedAuthPageState extends State<EncryptedAuthPage> {
                 border: OutlineInputBorder(),
               ),
             ),
-            Row(
-              children: [
-                const Text('Algorithm: '),
-                Radio<IdentitySignatureType>(
-                  value: IdentitySignatureType.rsa,
-                  groupValue: _sigType,
-                  onChanged: (v) => setState(() => _sigType = v!),
-                ),
-                const Text('RSA'),
-                Radio<IdentitySignatureType>(
-                  value: IdentitySignatureType.ecdsa,
-                  groupValue: _sigType,
-                  onChanged: (v) => setState(() => _sigType = v!),
-                ),
-                const Text('ECDSA'),
-              ],
+            RadioGroup<IdentitySignatureType>(
+              groupValue: _sigType,
+              onChanged: (v) => setState(() => _sigType = v!),
+              child: const Row(
+                children: [
+                  Text('Algorithm: '),
+                  Radio<IdentitySignatureType>(
+                    value: IdentitySignatureType.rsa,
+                  ),
+                  Text('RSA'),
+                  Radio<IdentitySignatureType>(
+                    value: IdentitySignatureType.ecdsa,
+                  ),
+                  Text('ECDSA'),
+                ],
+              ),
             ),
             SwitchListTile(
               title: const Text('Enforce Biometric'),

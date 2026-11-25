@@ -1,6 +1,7 @@
 package com.amit.local_biometric
 
 import android.content.Context
+import androidx.core.content.edit
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import io.flutter.plugin.common.EventChannel
@@ -36,9 +37,7 @@ class LocalIdentityChangeMonitor(private val context: Context, private val ident
 
     fun acknowledgeChange() {
         context.getSharedPreferences(LocalBiometricConstants.identityStatusFilename(), Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean("has_changed", false)
-            .apply()
+            .edit { putBoolean("has_changed", false) }
         checkAndEmit()
     }
 
@@ -60,7 +59,7 @@ class LocalIdentityChangeMonitor(private val context: Context, private val ident
                         sig.initSign(entry.privateKey)
                     } catch (e: Exception) {
                         if (e is android.security.keystore.KeyPermanentlyInvalidatedException) {
-                            prefs.edit().putBoolean("has_changed", true).apply()
+                            prefs.edit { putBoolean("has_changed", true) }
                             return@withContext IdentityStatus.CHANGED
                         }
                     }

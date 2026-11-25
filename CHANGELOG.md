@@ -1,3 +1,12 @@
+## Unreleased
+
+* **Breaking (iOS/macOS): CocoaPods support removed.** The plugin now ships only as a Swift
+  package, so apps need Swift Package Manager turned on (`flutter config
+  --enable-swift-package-manager`). Apps with SPM off can't use it on iOS or macOS. Other plugins
+  in your app can still use CocoaPods.
+* Android: `androidx.biometric` 1.4.0-alpha07 → 1.4.0-rc01, `appcompat` 1.7.0 → 1.8.0,
+  `lifecycle-common` 2.8.7 → 2.11.1.
+
 ## 0.0.5
 
 * **Android minimum lowered from API 28 to API 24 (Android 7.0)**, matching Flutter's default

@@ -16,16 +16,19 @@ identities. It has two feature surfaces:
 The Dart API is a thin wrapper (`lib/local_biometric.dart`) around a Pigeon-generated platform channel.
 All real logic lives in the native platform implementations under `android/`, `ios/`, and `windows/`.
 `macos/` has no native source of its own — it reuses the iOS Swift implementation directly (it compiles
-against `LocalAuthentication`/Secure Enclave APIs that exist on both platforms). Both CocoaPods and
-Swift Package Manager distribution are supported: `macos/local_biometric.podspec` points its
-`source_files` at `../ios/local_biometric/Sources/local_biometric/**/*`, and
-`macos/local_biometric/Package.swift` reaches the same sources via a tracked symlink
-(`macos/local_biometric/Sources` → `../../ios/local_biometric/Sources`) — there is still only one copy
+against `LocalAuthentication`/Secure Enclave APIs that exist on both platforms). Distribution is
+**Swift Package Manager only** — the CocoaPods podspecs were removed, so apps with SPM disabled can't use
+this plugin on iOS/macOS. Apps with SPM enabled still work even if other plugins are CocoaPods-only
+(Flutter links each plugin through whichever it supports). Don't
+re-add a podspec without deciding to support CocoaPods again. `macos/local_biometric/Package.swift`
+reaches the iOS sources via a tracked symlink
+(`macos/local_biometric/Sources` → `../../ios/local_biometric/Sources`) — there is only one copy
 of the Swift source on disk; don't duplicate it when adding files, add them under
-`ios/local_biometric/Sources/local_biometric/` and both distribution paths pick them up.
+`ios/local_biometric/Sources/local_biometric/` and both packages pick them up. The example app is
+SPM-only too (no Podfile).
 
-iOS/macOS deployment targets are iOS 16.0 / macOS 13.0 (set in both the podspecs and the
-`Package.swift` manifests — keep them in sync if bumped again).
+iOS/macOS deployment targets are iOS 16.0 / macOS 13.0 (set in the two `Package.swift` manifests —
+keep them in sync if bumped again).
 
 ## Platform support status (important — don't assume parity)
 
@@ -198,8 +201,8 @@ macOS, so anything platform-specific in them must be `#if os(iOS) / #elseif os(m
 `registrar.messenger` (a property on macOS), and `UIApplication.didBecomeActiveNotification` vs
 `NSApplication.didBecomeActiveNotification`. These platform branches were only exercised for the first
 time when SPM support was added (SPM's stricter per-target module resolution surfaced them as hard
-compile errors) — actually build for macOS after touching either file, don't assume CocoaPods alone
-proves it compiles.
+compile errors) — actually build for macOS after touching either file, don't assume an iOS build
+alone proves it compiles.
 
 ### Error code mapping
 

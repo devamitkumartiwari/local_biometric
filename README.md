@@ -67,6 +67,16 @@ declare them yourself if you want them visible; that's harmless:
 Needs **Android 7.0+ (API 24)**, **iOS 16+** or **macOS 13+**. Windows support is partial; see
 [Platform support](#platform-support).
 
+**iOS and macOS need Swift Package Manager.** There's no CocoaPods podspec. Other plugins in your
+app can still use CocoaPods. If SPM is off in your Flutter setup, turn it on with
+`flutter config --enable-swift-package-manager`.
+
+Set your app's iOS deployment target to 16.0 in Xcode
+(Runner → General → Minimum Deployments). If a build fails with *"requires minimum platform
+version 16.0 … but this target supports 15.0"* even though you already did, run the build again or
+run `flutter clean`. Flutter's build tool can reset its generated plugin package to iOS 15.0 when
+your dependencies have just changed, and the next build sets it back to 16.0.
+
 ## Quick start
 
 **1. Check that the user is present.** No keys are involved:
